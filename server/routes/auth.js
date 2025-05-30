@@ -172,29 +172,39 @@ const getClinicInfo = async (req, res) => {
 
     // Check database connection
     if (!isConnected()) {
+      console.error('Database not connected when fetching clinic info');
       return res.status(503).json({
         success: false,
-        message: 'Database connection unavailable'
+        message: 'Database connection unavailable. Please try again later.',
+        error: process.env.NODE_ENV === 'development' ? 'MongoDB not connected' : undefined
       });
     }
 
-    const clinic = await Clinic.findOne({ 
+    console.log(`Fetching clinic info for ID: ${clinicId}`);
+    
+    const clinic = await Clinic.findOne({
       clinicId: clinicId.toUpperCase(),
-      isActive: true 
-    }).select('clinicName clinicId');
+      isActive: true
+    }).select('clinicName isActive clinicId').lean();
 
     if (!clinic) {
+      console.log(`Clinic not found or inactive: ${clinicId}`);
       return res.status(404).json({
         success: false,
-        message: 'Clinic not found or inactive'
+        message: 'Clinic not found or inactive',
+        error: process.env.NODE_ENV === 'development' ? `No active clinic found with ID: ${clinicId}` : undefined
       });
     }
 
+    console.log(`Found clinic: ${clinic.clinicName} (${clinic.clinicId})`);
+    
     res.json({
       success: true,
       clinic: {
+        id: clinic._id,
         clinicId: clinic.clinicId,
-        clinicName: clinic.clinicName
+        name: clinic.clinicName,
+        isActive: clinic.isActive
       }
     });
 
@@ -202,7 +212,8 @@ const getClinicInfo = async (req, res) => {
     console.error('Get clinic info error:', error);
     res.status(500).json({
       success: false,
-      message: 'Server error'
+      message: 'Server error getting clinic info',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };

@@ -38,6 +38,11 @@ app.get('/', (req, res) => {
   });
 });
 
+// Redirect /login to /api/auth/login for backward compatibility
+app.all('/login', (req, res) => {
+  res.redirect(301, '/api/auth/login');
+});
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.status(200).json({
