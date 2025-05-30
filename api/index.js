@@ -19,12 +19,23 @@ const connectDB = async () => {
     mongoose.set('strictQuery', false);
 
     const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI;
+    console.log('🔍 Attempting MongoDB connection...');
+    console.log('🔍 Environment check:', {
+      MONGODB_URI: process.env.MONGODB_URI ? 'SET' : 'NOT SET',
+      MONGO_URI: process.env.MONGO_URI ? 'SET' : 'NOT SET',
+      NODE_ENV: process.env.NODE_ENV
+    });
+
     if (!mongoUri) {
       throw new Error('MongoDB URI not found in environment variables');
     }
 
+    // Log connection attempt (without showing full URI for security)
+    console.log('🔍 Connecting to MongoDB Atlas...');
+    console.log('🔍 URI format:', mongoUri.substring(0, 20) + '...');
+
     await mongoose.connect(mongoUri, {
-      serverSelectionTimeoutMS: 5000,
+      serverSelectionTimeoutMS: 10000, // Increased timeout
       socketTimeoutMS: 45000,
       bufferCommands: false,
       bufferMaxEntries: 0,
@@ -34,8 +45,10 @@ const connectDB = async () => {
 
     isConnected = true;
     console.log('✅ MongoDB Connected Successfully!');
+    console.log('✅ Connection state:', mongoose.connection.readyState);
   } catch (error) {
     console.error('❌ MongoDB Connection Failed:', error.message);
+    console.error('❌ Error details:', error);
     throw error;
   }
 };
@@ -100,8 +113,35 @@ app.get('/api/health', (req, res) => {
     status: 'OK',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
-    environment: process.env.NODE_ENV || 'development'
+    environment: process.env.NODE_ENV || 'development',
+    mongodb: {
+      connected: checkConnection(),
+      readyState: mongoose.connection.readyState,
+      host: mongoose.connection.host || 'not connected'
+    }
   });
+});
+
+// MongoDB connection test endpoint
+app.get('/api/test-db', async (req, res) => {
+  try {
+    await connectDB();
+    res.json({
+      success: true,
+      message: 'Database connection successful',
+      connection: {
+        readyState: mongoose.connection.readyState,
+        host: mongoose.connection.host,
+        name: mongoose.connection.name
+      }
+    });
+  } catch (error) {
+    res.status(503).json({
+      success: false,
+      message: 'Database connection failed',
+      error: error.message
+    });
+  }
 });
 
 // Simple admin login route (no DB dependency)
