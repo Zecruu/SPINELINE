@@ -143,6 +143,35 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Simple environment check endpoint (no DB dependency)
+app.get('/api/env-check', (req, res) => {
+  try {
+    const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI;
+
+    res.json({
+      success: true,
+      environment: {
+        NODE_ENV: process.env.NODE_ENV,
+        JWT_SECRET_EXISTS: !!process.env.JWT_SECRET,
+        MONGO_URI_EXISTS: !!process.env.MONGO_URI,
+        MONGODB_URI_EXISTS: !!process.env.MONGODB_URI,
+        ADMIN_EMAIL_EXISTS: !!process.env.ADMIN_EMAIL,
+        ADMIN_PASSWORD_EXISTS: !!process.env.ADMIN_PASSWORD,
+        CONNECTION_STRING_FORMAT: mongoUri ? mongoUri.substring(0, 50) + '...' : 'NOT_FOUND',
+        CONNECTION_STRING_INCLUDES_DB: mongoUri ? mongoUri.includes('/spineline') : false
+      },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Env check error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Environment check failed',
+      error: error.message
+    });
+  }
+});
+
 // MongoDB connection test endpoint
 app.get('/api/test-db', async (req, res) => {
   try {
