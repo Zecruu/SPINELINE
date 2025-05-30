@@ -20,7 +20,6 @@ const connectDB = async () => {
     // Disable Mongoose buffering globally for serverless
     mongoose.set('strictQuery', false);
     mongoose.set('bufferCommands', false);
-    mongoose.set('bufferMaxEntries', 0);
 
     const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI;
     console.log('🔍 Attempting MongoDB connection...');
