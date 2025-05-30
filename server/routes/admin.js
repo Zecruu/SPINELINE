@@ -10,10 +10,12 @@ router.post('/login', adminLogin);
 // Get all clinics (admin only)
 router.get('/clinics', verifyAdmin, async (req, res) => {
   try {
+    console.log('Admin clinics route hit, user:', req.user);
     const clinics = await Clinic.find({})
       .select('clinicName clinicId contactInfo isActive createdAt')
       .sort({ createdAt: -1 });
 
+    console.log('Found clinics:', clinics.length);
     res.json({
       success: true,
       clinics
@@ -22,7 +24,8 @@ router.get('/clinics', verifyAdmin, async (req, res) => {
     console.error('Get clinics error:', error);
     res.status(500).json({
       success: false,
-      message: 'Server error fetching clinics'
+      message: 'Server error fetching clinics',
+      error: error.message
     });
   }
 });
@@ -33,10 +36,12 @@ router.post('/clinics', verifyAdmin, createClinic);
 // Get all users (admin only)
 router.get('/users', verifyAdmin, async (req, res) => {
   try {
+    console.log('Admin users route hit, user:', req.user);
     const users = await User.find({ role: { $ne: 'admin' } })
       .select('name email role clinicId isActive createdAt lastLogin')
       .sort({ createdAt: -1 });
 
+    console.log('Found users:', users.length);
     res.json({
       success: true,
       users
@@ -45,7 +50,8 @@ router.get('/users', verifyAdmin, async (req, res) => {
     console.error('Get users error:', error);
     res.status(500).json({
       success: false,
-      message: 'Server error fetching users'
+      message: 'Server error fetching users',
+      error: error.message
     });
   }
 });

@@ -5,11 +5,11 @@ const { User } = require('../models');
 const verifyToken = async (req, res, next) => {
   try {
     const token = req.header('Authorization')?.replace('Bearer ', '');
-    
+
     if (!token) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Access denied. No token provided.' 
+      return res.status(401).json({
+        success: false,
+        message: 'Access denied. No token provided.'
       });
     }
 
@@ -18,15 +18,15 @@ const verifyToken = async (req, res, next) => {
     next();
   } catch (error) {
     if (error.name === 'TokenExpiredError') {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Token expired. Please login again.' 
+      return res.status(401).json({
+        success: false,
+        message: 'Token expired. Please login again.'
       });
     }
-    
-    return res.status(401).json({ 
-      success: false, 
-      message: 'Invalid token.' 
+
+    return res.status(401).json({
+      success: false,
+      message: 'Invalid token.'
     });
   }
 };
@@ -34,22 +34,39 @@ const verifyToken = async (req, res, next) => {
 // Middleware to verify admin access
 const verifyAdmin = async (req, res, next) => {
   try {
-    // First verify the token
-    await verifyToken(req, res, () => {});
-    
-    // Check if user has admin role
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Access denied. Admin privileges required.' 
+    const token = req.header('Authorization')?.replace('Bearer ', '');
+
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: 'Access denied. No token provided.'
       });
     }
-    
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = decoded;
+
+    // Check if user has admin role
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Admin privileges required.'
+      });
+    }
+
     next();
   } catch (error) {
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Server error during authentication.' 
+    console.error('Admin verification error:', error);
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({
+        success: false,
+        message: 'Token expired. Please login again.'
+      });
+    }
+
+    return res.status(401).json({
+      success: false,
+      message: 'Invalid token or server error during authentication.'
     });
   }
 };
@@ -58,25 +75,25 @@ const verifyAdmin = async (req, res, next) => {
 const verifyClinicAccess = (req, res, next) => {
   try {
     const { clinicId } = req.params;
-    
+
     // Admin can access any clinic
     if (req.user.role === 'admin') {
       return next();
     }
-    
+
     // User must belong to the clinic they're trying to access
     if (req.user.clinicId !== clinicId) {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Access denied. You can only access your own clinic data.' 
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. You can only access your own clinic data.'
       });
     }
-    
+
     next();
   } catch (error) {
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Server error during clinic access verification.' 
+    return res.status(500).json({
+      success: false,
+      message: 'Server error during clinic access verification.'
     });
   }
 };
