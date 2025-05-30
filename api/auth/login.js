@@ -1,70 +1,9 @@
 // User login endpoint
-const mongoose = require('mongoose');
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
+import { connectToDatabase } from '../../lib/mongodb.js';
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
 
-// MongoDB connection
-let isConnected = false;
-
-const connectDB = async () => {
-  if (isConnected && mongoose.connection.readyState === 1) {
-    return;
-  }
-  
-  try {
-    mongoose.set('strictQuery', false);
-    mongoose.set('bufferCommands', false);
-
-    const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI;
-    
-    if (!mongoUri) {
-      throw new Error('MongoDB URI not found in environment variables');
-    }
-
-    await mongoose.connect(mongoUri, {
-      serverSelectionTimeoutMS: 30000,
-      socketTimeoutMS: 45000,
-      bufferCommands: false,
-      maxPoolSize: 10,
-      minPoolSize: 1,
-      maxIdleTimeMS: 30000,
-      heartbeatFrequencyMS: 10000,
-      connectTimeoutMS: 30000,
-      family: 4
-    });
-
-    isConnected = true;
-    console.log('✅ MongoDB Connected Successfully!');
-  } catch (error) {
-    console.error('❌ MongoDB Connection Failed:', error.message);
-    isConnected = false;
-    throw error;
-  }
-};
-
-// User Schema
-const userSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  email: { type: String, required: true, unique: true },
-  password: { type: String, required: true },
-  role: { type: String, enum: ['doctor', 'secretary', 'admin'], default: 'doctor' },
-  clinicId: { type: String, required: true },
-  isActive: { type: Boolean, default: true },
-  lastLogin: { type: Date }
-}, { timestamps: true });
-
-const User = mongoose.models.User || mongoose.model('User', userSchema);
-
-// Clinic Schema
-const clinicSchema = new mongoose.Schema({
-  clinicName: { type: String, required: true },
-  clinicId: { type: String, required: true, unique: true },
-  isActive: { type: Boolean, default: true }
-}, { timestamps: true });
-
-const Clinic = mongoose.models.Clinic || mongoose.model('Clinic', clinicSchema);
-
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   // Add CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -91,14 +30,14 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    await connectDB();
+    const { db } = await connectToDatabase();
 
     // Find user
-    const user = await User.findOne({
+    const user = await db.collection('users').findOne({
       email: email.toLowerCase(),
       clinicId: clinicId.toUpperCase(),
       isActive: true
-    }).lean();
+    });
 
     if (!user) {
       return res.status(401).json({
@@ -108,7 +47,7 @@ module.exports = async function handler(req, res) {
     }
 
     // Check clinic
-    const clinic = await Clinic.findOne({
+    const clinic = await db.collection('clinics').findOne({
       clinicId: clinicId.toUpperCase(),
       isActive: true
     });
@@ -140,7 +79,10 @@ module.exports = async function handler(req, res) {
     }
 
     // Update last login
-    await User.findByIdAndUpdate(user._id, { lastLogin: new Date() });
+    await db.collection('users').updateOne(
+      { _id: user._id },
+      { $set: { lastLogin: new Date() } }
+    );
 
     // Generate token
     const token = jwt.sign({
