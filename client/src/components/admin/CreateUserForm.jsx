@@ -24,7 +24,7 @@ const CreateUserForm = ({ onSuccess }) => {
   const loadClinics = async () => {
     try {
       const token = localStorage.getItem('adminToken');
-      const response = await axios.get('/api/secret-admin/clinics', {
+      const response = await axios.get('/api/admin/clinics', {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -66,7 +66,7 @@ const CreateUserForm = ({ onSuccess }) => {
     try {
       const token = localStorage.getItem('adminToken');
       const response = await axios.post(
-        '/api/secret-admin/users',
+        '/api/admin/users',
         formData,
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -80,7 +80,7 @@ const CreateUserForm = ({ onSuccess }) => {
           `Clinic: ${clinic.clinicName} (${clinic.clinicId})\n` +
           `Password: ${formData.password} (Please share securely with the user)`
         );
-        
+
         // Reset form
         setFormData({
           name: '',
@@ -96,7 +96,7 @@ const CreateUserForm = ({ onSuccess }) => {
     } catch (error) {
       console.error('Create user error:', error);
       setError(
-        error.response?.data?.message || 
+        error.response?.data?.message ||
         'Failed to create user. Please try again.'
       );
     } finally {
@@ -115,7 +115,7 @@ const CreateUserForm = ({ onSuccess }) => {
   return (
     <div>
       <h2 className="text-2xl font-bold text-white mb-6">Create New User</h2>
-      
+
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
@@ -132,7 +132,7 @@ const CreateUserForm = ({ onSuccess }) => {
               placeholder="Enter full name"
             />
           </div>
-          
+
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
               Email Address *
@@ -165,7 +165,7 @@ const CreateUserForm = ({ onSuccess }) => {
               <option value="secretary">Secretary</option>
             </select>
           </div>
-          
+
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
               Clinic *

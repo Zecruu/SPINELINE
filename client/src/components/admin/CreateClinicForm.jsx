@@ -63,7 +63,7 @@ const CreateClinicForm = ({ onSuccess }) => {
     try {
       const token = localStorage.getItem('adminToken');
       const response = await axios.get(
-        `/api/secret-admin/generate-clinic-id?clinicName=${encodeURIComponent(formData.clinicName)}`,
+        `/api/admin/generate-clinic-id?clinicName=${encodeURIComponent(formData.clinicName)}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -90,7 +90,7 @@ const CreateClinicForm = ({ onSuccess }) => {
     try {
       const token = localStorage.getItem('adminToken');
       const response = await axios.post(
-        '/api/secret-admin/clinics',
+        '/api/admin/clinics',
         formData,
         { headers: { Authorization: `Bearer ${token}` } }
       );

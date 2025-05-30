@@ -27,20 +27,20 @@ const AdminLogin = () => {
     setError('');
 
     try {
-      const response = await axios.post('/api/secret-admin/login', formData);
-      
+      const response = await axios.post('/api/admin/login', formData);
+
       if (response.data.success) {
         // Store token and user info
         localStorage.setItem('adminToken', response.data.token);
         localStorage.setItem('adminUser', JSON.stringify(response.data.user));
-        
+
         // Redirect to admin dashboard
         navigate('/secret-admin/dashboard');
       }
     } catch (error) {
       console.error('Login error:', error);
       setError(
-        error.response?.data?.message || 
+        error.response?.data?.message ||
         'Login failed. Please check your credentials.'
       );
     } finally {
@@ -64,7 +64,7 @@ const AdminLogin = () => {
             Restricted access for SpineLine HQ only
           </p>
         </div>
-        
+
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="space-y-4">
             <div>
@@ -83,7 +83,7 @@ const AdminLogin = () => {
                 placeholder="Enter admin email"
               />
             </div>
-            
+
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-300">
                 Password

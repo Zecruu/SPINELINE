@@ -15,7 +15,7 @@ const ClinicsTable = ({ onUpdate }) => {
   const loadClinics = async () => {
     try {
       const token = localStorage.getItem('adminToken');
-      const response = await axios.get('/api/secret-admin/clinics', {
+      const response = await axios.get('/api/admin/clinics', {
         headers: { Authorization: `Bearer ${token}` }
       });
 

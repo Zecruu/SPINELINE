@@ -22,7 +22,7 @@ const AdminDashboard = () => {
     // Check if user is authenticated
     const token = localStorage.getItem('adminToken');
     const user = localStorage.getItem('adminUser');
-    
+
     if (!token || !user) {
       navigate('/secret-admin');
       return;
@@ -40,8 +40,8 @@ const AdminDashboard = () => {
       };
 
       const [clinicsResponse, usersResponse] = await Promise.all([
-        axios.get('/api/secret-admin/clinics', config),
-        axios.get('/api/secret-admin/users', config)
+        axios.get('/api/admin/clinics', config),
+        axios.get('/api/admin/users', config)
       ]);
 
       const clinics = clinicsResponse.data.clinics || [];
