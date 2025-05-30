@@ -209,7 +209,7 @@ app.post('/api/secret-admin/login', (req, res) => {
 // Remove mock data endpoints - database is working
 
 // Test endpoint to check database connection
-app.get('/test-db', async (req, res) => {
+app.get('/api/test-db', async (req, res) => {
   try {
     const mongoose = require('mongoose');
     const { User, Clinic } = require('../server/models');
@@ -241,21 +241,21 @@ app.get('/test-db', async (req, res) => {
   }
 });
 
-// API Routes (Vercel strips /api prefix)
-app.use('/secret-admin', require('../server/routes/admin'));
-app.use('/auth', require('../server/routes/auth'));
-app.use('/patients', require('../server/routes/patients'));
-app.use('/appointments', require('../server/routes/appointments'));
-app.use('/service-codes', require('../server/routes/serviceCodes'));
-app.use('/diagnostic-codes', require('../server/routes/diagnosticCodes'));
-app.use('/soap-templates', require('../server/routes/soapTemplates'));
-app.use('/templates', require('../server/routes/templates'));
-app.use('/audit', require('../server/routes/audit'));
-app.use('/reports', require('../server/routes/reports'));
-app.use('/ledger', require('../server/routes/ledger'));
-app.use('/import-export', require('../server/routes/importExport'));
-app.use('/settings', require('../server/routes/settings'));
-app.use('/doctors', require('../server/routes/doctors'));
+// API Routes (Vercel rewrites /api/* to this function)
+app.use('/api/secret-admin', require('../server/routes/admin'));
+app.use('/api/auth', require('../server/routes/auth'));
+app.use('/api/patients', require('../server/routes/patients'));
+app.use('/api/appointments', require('../server/routes/appointments'));
+app.use('/api/service-codes', require('../server/routes/serviceCodes'));
+app.use('/api/diagnostic-codes', require('../server/routes/diagnosticCodes'));
+app.use('/api/soap-templates', require('../server/routes/soapTemplates'));
+app.use('/api/templates', require('../server/routes/templates'));
+app.use('/api/audit', require('../server/routes/audit'));
+app.use('/api/reports', require('../server/routes/reports'));
+app.use('/api/ledger', require('../server/routes/ledger'));
+app.use('/api/import-export', require('../server/routes/importExport'));
+app.use('/api/settings', require('../server/routes/settings'));
+app.use('/api/doctors', require('../server/routes/doctors'));
 
 // Error handling middleware
 app.use((err, req, res, next) => {
