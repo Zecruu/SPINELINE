@@ -1,5 +1,57 @@
-import { connectToDatabase } from '../../lib/mongodb.js';
+import mongoose from 'mongoose';
 import bcrypt from 'bcrypt';
+
+// MongoDB connection
+let isConnected = false;
+
+const connectDB = async () => {
+  if (isConnected && mongoose.connection.readyState === 1) {
+    return;
+  }
+
+  try {
+    mongoose.set('strictQuery', false);
+    mongoose.set('bufferCommands', false);
+
+    const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI;
+
+    if (!mongoUri) {
+      throw new Error('MongoDB URI not found in environment variables');
+    }
+
+    await mongoose.connect(mongoUri, {
+      serverSelectionTimeoutMS: 30000,
+      socketTimeoutMS: 45000,
+      bufferCommands: false,
+      maxPoolSize: 10,
+      minPoolSize: 1,
+      maxIdleTimeMS: 30000,
+      heartbeatFrequencyMS: 10000,
+      connectTimeoutMS: 30000,
+      family: 4
+    });
+
+    isConnected = true;
+    console.log('✅ MongoDB Connected Successfully!');
+  } catch (error) {
+    console.error('❌ MongoDB Connection Failed:', error.message);
+    isConnected = false;
+    throw error;
+  }
+};
+
+// User Schema
+const userSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  email: { type: String, required: true },
+  password: { type: String, required: true },
+  role: { type: String, enum: ['doctor', 'secretary', 'admin'], default: 'doctor' },
+  clinicId: { type: String, required: true },
+  isActive: { type: Boolean, default: true },
+  lastLogin: { type: Date }
+}, { timestamps: true });
+
+const User = mongoose.models.User || mongoose.model('User', userSchema);
 
 export default async function handler(req, res) {
   // Add CORS headers
@@ -12,13 +64,12 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { db } = await connectToDatabase();
+    await connectDB();
 
     if (req.method === 'GET') {
-      const users = await db.collection('users')
-        .find({}, { projection: { password: 0 } })
+      const users = await User.find({}, { password: 0 })
         .sort({ createdAt: -1 })
-        .toArray();
+        .lean();
 
       return res.json({
         success: true,
@@ -36,7 +87,7 @@ export default async function handler(req, res) {
         });
       }
 
-      const existingUser = await db.collection('users').findOne({
+      const existingUser = await User.findOne({
         email: email.toLowerCase(),
         clinicId: clinicId.toUpperCase()
       });
@@ -50,22 +101,21 @@ export default async function handler(req, res) {
 
       const hashedPassword = await bcrypt.hash(password, 10);
 
-      const newUser = {
+      const newUser = new User({
         name,
         email: email.toLowerCase(),
         password: hashedPassword,
         role,
         clinicId: clinicId.toUpperCase(),
-        isActive: true,
-        createdAt: new Date()
-      };
+        isActive: true
+      });
 
-      await db.collection('users').insertOne(newUser);
+      await newUser.save();
 
       return res.json({
         success: true,
         message: 'User created successfully',
-        user: { ...newUser, password: undefined }
+        user: { ...newUser.toObject(), password: undefined }
       });
     }
 
@@ -79,8 +129,7 @@ export default async function handler(req, res) {
         });
       }
 
-      const { ObjectId } = await import('mongodb');
-      await db.collection('users').deleteOne({ _id: new ObjectId(userId) });
+      await User.findByIdAndDelete(userId);
 
       return res.json({
         success: true,
