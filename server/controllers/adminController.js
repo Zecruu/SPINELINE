@@ -1,7 +1,6 @@
 const bcrypt = require('bcrypt');
 const { User, Clinic } = require('../models');
 const { generateAdminToken } = require('../middleware/auth');
-const { isConnected } = require('../config/db');
 
 // Admin login
 const adminLogin = async (req, res) => {
@@ -96,14 +95,6 @@ const adminLogin = async (req, res) => {
 // Create new clinic
 const createClinic = async (req, res) => {
   try {
-    // Check database connection
-    if (!isConnected()) {
-      return res.status(503).json({
-        success: false,
-        message: 'Database connection unavailable. Please check MongoDB Atlas connection.'
-      });
-    }
-
     const { clinicName, clinicId, contactInfo } = req.body;
 
     // Validate required fields
@@ -165,14 +156,6 @@ const createClinic = async (req, res) => {
 // Create new user
 const createUser = async (req, res) => {
   try {
-    // Check database connection
-    if (!isConnected()) {
-      return res.status(503).json({
-        success: false,
-        message: 'Database connection unavailable. Please check MongoDB Atlas connection.'
-      });
-    }
-
     const { name, email, password, role, clinicId } = req.body;
 
     // Validate required fields

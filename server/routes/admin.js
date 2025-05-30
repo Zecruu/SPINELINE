@@ -3,7 +3,6 @@ const router = express.Router();
 const { verifyAdmin } = require('../middleware/auth');
 const { adminLogin, createClinic, createUser } = require('../controllers/adminController');
 const { User, Clinic } = require('../models');
-const { isConnected } = require('../config/db');
 
 // Admin login route (no auth required)
 router.post('/login', adminLogin);
@@ -11,21 +10,7 @@ router.post('/login', adminLogin);
 // Get all clinics (admin only)
 router.get('/clinics', verifyAdmin, async (req, res) => {
   try {
-    let clinics;
-
-    // Check database connection
-    if (!isConnected()) {
-      console.log('📝 Using mock data - Database not connected');
-      clinics = await mockOperations.getClinics();
-
-      return res.json({
-        success: true,
-        clinics,
-        message: 'Using mock data - Database connection unavailable'
-      });
-    }
-
-    clinics = await Clinic.find({})
+    const clinics = await Clinic.find({})
       .select('clinicName clinicId contactInfo isActive createdAt')
       .sort({ createdAt: -1 });
 
@@ -48,15 +33,6 @@ router.post('/clinics', verifyAdmin, createClinic);
 // Get all users (admin only)
 router.get('/users', verifyAdmin, async (req, res) => {
   try {
-    // Check database connection
-    if (!isConnected()) {
-      return res.status(503).json({
-        success: false,
-        message: 'Database connection unavailable. Please check MongoDB Atlas connection.',
-        users: []
-      });
-    }
-
     const users = await User.find({ role: { $ne: 'admin' } })
       .select('name email role clinicId isActive createdAt lastLogin')
       .populate('clinic', 'clinicName')
