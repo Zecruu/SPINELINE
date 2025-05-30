@@ -4,6 +4,17 @@ const { verifyAdmin } = require('../middleware/auth');
 const { adminLogin, createClinic, createUser } = require('../controllers/adminController');
 const { User, Clinic } = require('../models');
 
+// Database connection check - works in both server and serverless environments
+let isConnected;
+try {
+  // Try to import from config (server environment)
+  isConnected = require('../config/db').isConnected;
+} catch (error) {
+  // Fallback for serverless environment
+  const mongoose = require('mongoose');
+  isConnected = () => mongoose.connection.readyState === 1;
+}
+
 // Admin login route (no auth required)
 router.post('/login', adminLogin);
 

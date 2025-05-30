@@ -76,6 +76,11 @@ const checkConnection = () => {
   return mongoose.connection.readyState === 1;
 };
 
+// Export isConnected for compatibility with server routes
+const isConnected = () => {
+  return mongoose.connection.readyState === 1;
+};
+
 const app = express();
 
 // Middleware
@@ -94,18 +99,20 @@ app.use(async (req, res, next) => {
   try {
     await connectDB();
     req.dbConnected = true;
+    req.isConnected = isConnected; // Add isConnected function to request
     next();
   } catch (error) {
     console.error('Database connection failed:', error);
     req.dbConnected = false;
+    req.isConnected = () => false; // Add isConnected function that returns false
 
     // Allow certain routes to proceed with mock data
     const allowedRoutes = [
-      '/api/secret-admin/login',
-      '/api/secret-admin/clinics',
-      '/api/secret-admin/users',
-      '/api/health',
-      '/api/test-db'
+      '/secret-admin/login',
+      '/secret-admin/clinics',
+      '/secret-admin/users',
+      '/health',
+      '/test-db'
     ];
 
     if (allowedRoutes.some(route => req.path.startsWith(route))) {
@@ -131,12 +138,40 @@ app.get('/', (req, res) => {
   res.json({
     message: 'SpineLine API Server is running!',
     version: '1.0.0',
-    environment: process.env.NODE_ENV
+    environment: process.env.NODE_ENV,
+    timestamp: new Date().toISOString(),
+    path: req.path,
+    originalUrl: req.originalUrl,
+    availableEndpoints: [
+      'GET /health - Health check',
+      'GET /debug-routes - Route debugging',
+      'GET /env-check - Environment check',
+      'GET /test-db - Database test',
+      'GET /debug-mongo - MongoDB debug',
+      'GET /debug - Full debug info',
+      'POST /secret-admin/login - Admin login',
+      'POST /auth/login - User login',
+      'GET /auth/clinic/:clinicId - Clinic validation',
+      'And all other API routes...'
+    ]
+  });
+});
+
+// Debug route to check routing
+app.get('/debug-routes', (req, res) => {
+  res.json({
+    message: 'Route debugging info',
+    path: req.path,
+    originalUrl: req.originalUrl,
+    method: req.method,
+    headers: req.headers,
+    query: req.query,
+    timestamp: new Date().toISOString()
   });
 });
 
 // Health check endpoint
-app.get('/api/health', (req, res) => {
+app.get('/health', (req, res) => {
   res.status(200).json({
     status: 'OK',
     timestamp: new Date().toISOString(),
@@ -151,7 +186,7 @@ app.get('/api/health', (req, res) => {
 });
 
 // Simple environment check endpoint (no DB dependency)
-app.get('/api/env-check', (req, res) => {
+app.get('/env-check', (req, res) => {
   try {
     const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI;
 
@@ -180,7 +215,7 @@ app.get('/api/env-check', (req, res) => {
 });
 
 // MongoDB connection test endpoint
-app.get('/api/test-db', async (req, res) => {
+app.get('/test-db', async (req, res) => {
   // This endpoint checks DB connection and returns connection status
   try {
     await connectDB();
@@ -194,7 +229,7 @@ app.get('/api/test-db', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('❌ /api/test-db connection error:', error);
+    console.error('❌ /test-db connection error:', error);
     res.status(503).json({
       success: false,
       message: 'Database connection failed',
@@ -205,7 +240,7 @@ app.get('/api/test-db', async (req, res) => {
 
 // --- DEBUG ENDPOINT FOR VERCEL ---
 // This endpoint helps debug env var and DB connection issues in Vercel serverless
-app.get('/api/debug-mongo', async (req, res) => {
+app.get('/debug-mongo', async (req, res) => {
   const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI;
   let connectionResult = null;
   try {
@@ -237,7 +272,7 @@ app.get('/api/debug-mongo', async (req, res) => {
 });
 
 // Simple admin login route (no DB dependency)
-app.post('/api/secret-admin/login', (req, res) => {
+app.post('/secret-admin/login', (req, res) => {
   try {
     const { email, password } = req.body;
 
@@ -293,41 +328,8 @@ app.post('/api/secret-admin/login', (req, res) => {
 
 // Remove mock data endpoints - database is working
 
-// Test endpoint to check database connection
-app.get('/api/test-db', async (req, res) => {
-  try {
-    const mongoose = require('mongoose');
-    const { User, Clinic } = require('../server/models');
-
-    console.log('MongoDB connection state:', mongoose.connection.readyState);
-    console.log('MongoDB connection name:', mongoose.connection.name);
-
-    // Test basic queries
-    const userCount = await User.countDocuments();
-    const clinicCount = await Clinic.countDocuments();
-
-    res.json({
-      success: true,
-      database: {
-        connected: mongoose.connection.readyState === 1,
-        name: mongoose.connection.name,
-        userCount,
-        clinicCount
-      },
-      message: 'Database test successful'
-    });
-  } catch (error) {
-    console.error('Database test error:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message,
-      message: 'Database test failed'
-    });
-  }
-});
-
 // Debug endpoint to check environment and auth
-app.get('/api/debug', async (req, res) => {
+app.get('/debug', async (req, res) => {
   try {
     const mongoose = require('mongoose');
 
@@ -393,20 +395,21 @@ app.get('/api/debug', async (req, res) => {
 });
 
 // API Routes (Vercel rewrites /api/* to this function)
-app.use('/api/secret-admin', require('../server/routes/admin'));
-app.use('/api/auth', require('../server/routes/auth'));
-app.use('/api/patients', require('../server/routes/patients'));
-app.use('/api/appointments', require('../server/routes/appointments'));
-app.use('/api/service-codes', require('../server/routes/serviceCodes'));
-app.use('/api/diagnostic-codes', require('../server/routes/diagnosticCodes'));
-app.use('/api/soap-templates', require('../server/routes/soapTemplates'));
-app.use('/api/templates', require('../server/routes/templates'));
-app.use('/api/audit', require('../server/routes/audit'));
-app.use('/api/reports', require('../server/routes/reports'));
-app.use('/api/ledger', require('../server/routes/ledger'));
-app.use('/api/import-export', require('../server/routes/importExport'));
-app.use('/api/settings', require('../server/routes/settings'));
-app.use('/api/doctors', require('../server/routes/doctors'));
+// Note: Vercel strips the /api prefix, so routes are mounted without /api
+app.use('/secret-admin', require('../server/routes/admin'));
+app.use('/auth', require('../server/routes/auth'));
+app.use('/patients', require('../server/routes/patients'));
+app.use('/appointments', require('../server/routes/appointments'));
+app.use('/service-codes', require('../server/routes/serviceCodes'));
+app.use('/diagnostic-codes', require('../server/routes/diagnosticCodes'));
+app.use('/soap-templates', require('../server/routes/soapTemplates'));
+app.use('/templates', require('../server/routes/templates'));
+app.use('/audit', require('../server/routes/audit'));
+app.use('/reports', require('../server/routes/reports'));
+app.use('/ledger', require('../server/routes/ledger'));
+app.use('/import-export', require('../server/routes/importExport'));
+app.use('/settings', require('../server/routes/settings'));
+app.use('/doctors', require('../server/routes/doctors'));
 
 // Error handling middleware
 app.use((err, req, res, next) => {

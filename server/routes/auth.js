@@ -3,7 +3,17 @@ const router = express.Router();
 const bcrypt = require('bcrypt');
 const { User, Clinic } = require('../models');
 const { generateToken } = require('../middleware/auth');
-const { isConnected } = require('../config/db');
+
+// Database connection check - works in both server and serverless environments
+let isConnected;
+try {
+  // Try to import from config (server environment)
+  isConnected = require('../config/db').isConnected;
+} catch (error) {
+  // Fallback for serverless environment
+  const mongoose = require('mongoose');
+  isConnected = () => mongoose.connection.readyState === 1;
+}
 
 // User login route
 const userLogin = async (req, res) => {
@@ -27,7 +37,7 @@ const userLogin = async (req, res) => {
     }
 
     // Find user by email and clinic ID
-    const user = await User.findOne({ 
+    const user = await User.findOne({
       email: email.toLowerCase(),
       clinicId: clinicId.toUpperCase(),
       isActive: true
@@ -101,17 +111,17 @@ const userLogin = async (req, res) => {
 const verifyUserToken = async (req, res) => {
   try {
     const token = req.header('Authorization')?.replace('Bearer ', '');
-    
+
     if (!token) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'No token provided' 
+      return res.status(401).json({
+        success: false,
+        message: 'No token provided'
       });
     }
 
     const jwt = require('jsonwebtoken');
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    
+
     // Get fresh user data
     const user = await User.findById(decoded.userId)
       .select('name email role clinicId isActive')
@@ -145,15 +155,15 @@ const verifyUserToken = async (req, res) => {
 
   } catch (error) {
     if (error.name === 'TokenExpiredError') {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Token expired' 
+      return res.status(401).json({
+        success: false,
+        message: 'Token expired'
       });
     }
-    
-    return res.status(401).json({ 
-      success: false, 
-      message: 'Invalid token' 
+
+    return res.status(401).json({
+      success: false,
+      message: 'Invalid token'
     });
   }
 };
@@ -181,7 +191,7 @@ const getClinicInfo = async (req, res) => {
     }
 
     console.log(`Fetching clinic info for ID: ${clinicId}`);
-    
+
     const clinic = await Clinic.findOne({
       clinicId: clinicId.toUpperCase(),
       isActive: true
@@ -197,7 +207,7 @@ const getClinicInfo = async (req, res) => {
     }
 
     console.log(`Found clinic: ${clinic.clinicName} (${clinic.clinicId})`);
-    
+
     res.json({
       success: true,
       clinic: {
