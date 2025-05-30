@@ -206,52 +206,7 @@ app.post('/api/secret-admin/login', (req, res) => {
   }
 });
 
-// Mock data endpoints (when DB is not available)
-app.get('/api/secret-admin/clinics', (req, res, next) => {
-  if (!req.dbConnected) {
-    return res.json({
-      success: true,
-      clinics: [],
-      message: 'Database connection unavailable - showing empty data'
-    });
-  }
-  // If DB is connected, this will be handled by the admin routes below
-  next();
-});
-
-app.get('/api/secret-admin/users', (req, res, next) => {
-  if (!req.dbConnected) {
-    return res.json({
-      success: true,
-      users: [],
-      message: 'Database connection unavailable - showing empty data'
-    });
-  }
-  // If DB is connected, this will be handled by the admin routes below
-  next();
-});
-
-app.post('/api/secret-admin/clinics', (req, res, next) => {
-  if (!req.dbConnected) {
-    return res.status(503).json({
-      success: false,
-      message: 'Database connection unavailable. Cannot create clinic at this time.'
-    });
-  }
-  // If DB is connected, this will be handled by the admin routes below
-  next();
-});
-
-app.post('/api/secret-admin/users', (req, res, next) => {
-  if (!req.dbConnected) {
-    return res.status(503).json({
-      success: false,
-      message: 'Database connection unavailable. Cannot create user at this time.'
-    });
-  }
-  // If DB is connected, this will be handled by the admin routes below
-  next();
-});
+// Remove mock data endpoints - database is working
 
 // API Routes
 app.use('/api/secret-admin', require('../server/routes/admin'));

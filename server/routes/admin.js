@@ -35,7 +35,6 @@ router.get('/users', verifyAdmin, async (req, res) => {
   try {
     const users = await User.find({ role: { $ne: 'admin' } })
       .select('name email role clinicId isActive createdAt lastLogin')
-      .populate('clinic', 'clinicName')
       .sort({ createdAt: -1 });
 
     res.json({
