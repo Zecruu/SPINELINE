@@ -86,6 +86,12 @@ module.exports = async function handler(req, res) {
   }
 
   try {
+    console.log('Login request received:', {
+      method: req.method,
+      body: req.body,
+      headers: req.headers
+    });
+
     const { email, password, clinicId } = req.body;
 
     // Validate input
@@ -97,7 +103,9 @@ module.exports = async function handler(req, res) {
     }
 
     // Connect to database
+    console.log('Attempting to connect to database...');
     await connectDB();
+    console.log('Database connected successfully');
 
     // Find user by email and clinic ID
     const user = await User.findOne({
@@ -169,10 +177,12 @@ module.exports = async function handler(req, res) {
 
   } catch (error) {
     console.error('User login error:', error);
+    console.error('Error stack:', error.stack);
     res.status(500).json({
       success: false,
       message: 'Server error during login',
-      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 }
