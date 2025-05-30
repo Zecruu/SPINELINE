@@ -1,5 +1,44 @@
-import { connectToDatabase } from '../../lib/mongodb.js';
+import mongoose from 'mongoose';
 import jwt from 'jsonwebtoken';
+
+// MongoDB connection
+let isConnected = false;
+
+const connectDB = async () => {
+  if (isConnected && mongoose.connection.readyState === 1) {
+    return;
+  }
+
+  try {
+    mongoose.set('strictQuery', false);
+    mongoose.set('bufferCommands', false);
+
+    const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI;
+
+    if (!mongoUri) {
+      throw new Error('MongoDB URI not found in environment variables');
+    }
+
+    await mongoose.connect(mongoUri, {
+      serverSelectionTimeoutMS: 30000,
+      socketTimeoutMS: 45000,
+      bufferCommands: false,
+      maxPoolSize: 10,
+      minPoolSize: 1,
+      maxIdleTimeMS: 30000,
+      heartbeatFrequencyMS: 10000,
+      connectTimeoutMS: 30000,
+      family: 4
+    });
+
+    isConnected = true;
+    console.log('✅ MongoDB Connected Successfully!');
+  } catch (error) {
+    console.error('❌ MongoDB Connection Failed:', error.message);
+    isConnected = false;
+    throw error;
+  }
+};
 
 export default async function handler(req, res) {
   // Add CORS headers
@@ -28,7 +67,7 @@ export default async function handler(req, res) {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const { clinicId } = decoded;
 
-    const { db } = await connectToDatabase();
+    await connectDB();
     const { patientId, startDate, endDate, page = 1, limit = 50 } = req.query;
 
     const matchConditions = { clinicId };
@@ -49,6 +88,9 @@ export default async function handler(req, res) {
         matchConditions.appointmentDate.$lte = new Date(endDate);
       }
     }
+
+    // Use MongoDB native aggregation through mongoose connection
+    const db = mongoose.connection.db;
 
     // Get appointments with patient data
     const appointments = await db.collection('appointments').aggregate([

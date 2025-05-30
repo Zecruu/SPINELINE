@@ -8,13 +8,13 @@ const connectDB = async () => {
   if (isConnected && mongoose.connection.readyState === 1) {
     return;
   }
-
+  
   try {
     mongoose.set('strictQuery', false);
     mongoose.set('bufferCommands', false);
 
     const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI;
-
+    
     if (!mongoUri) {
       throw new Error('MongoDB URI not found in environment variables');
     }
@@ -69,17 +69,26 @@ export default async function handler(req, res) {
 
     await connectDB();
 
-    // Get today's date range
-    const today = new Date();
-    const startOfDay = new Date(today);
+    // Get date parameter (defaults to today)
+    const { date } = req.query;
+    const reportDate = date ? new Date(date) : new Date();
+    
+    // Set date range for the day
+    const startOfDay = new Date(reportDate);
     startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(today);
+    const endOfDay = new Date(reportDate);
     endOfDay.setHours(23, 59, 59, 999);
 
     // Use MongoDB native aggregation through mongoose connection
     const db = mongoose.connection.db;
 
-    // Get appointments with patient data
+    // Get clinic info
+    const clinic = await db.collection('clinics').findOne({ clinicId });
+    if (!clinic) {
+      return res.status(404).json({ success: false, message: 'Clinic not found' });
+    }
+
+    // Get appointments for the date
     const appointments = await db.collection('appointments').aggregate([
       {
         $match: {
@@ -99,38 +108,37 @@ export default async function handler(req, res) {
         }
       },
       {
-        $lookup: {
-          from: 'users',
-          localField: 'assignedDoctor',
-          foreignField: '_id',
-          as: 'doctor'
-        }
-      },
-      {
         $unwind: { path: '$patient', preserveNullAndEmptyArrays: true }
-      },
-      {
-        $unwind: { path: '$doctor', preserveNullAndEmptyArrays: true }
       },
       {
         $sort: { appointmentTime: 1 }
       }
     ]).toArray();
 
+    // Return data for frontend PDF generation (similar to production report)
     res.json({
       success: true,
-      appointments: appointments.map(apt => ({
-        ...apt,
-        patientName: apt.patient ? `${apt.patient.firstName} ${apt.patient.lastName}` : 'Unknown Patient',
-        doctorName: apt.doctor ? apt.doctor.name : 'Unassigned'
-      }))
+      reportData: {
+        clinic: {
+          name: clinic.clinicName,
+          id: clinic.clinicId
+        },
+        date: reportDate.toLocaleDateString(),
+        appointments: appointments.map(apt => ({
+          time: apt.appointmentTime,
+          patientName: apt.patient ? `${apt.patient.firstName} ${apt.patient.lastName}` : 'Unknown Patient',
+          status: apt.status,
+          visitType: apt.visitType || 'Regular',
+          notes: apt.notes || ''
+        }))
+      }
     });
 
   } catch (error) {
-    console.error('Error fetching today\'s appointments:', error);
+    console.error('Daily report PDF error:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch appointments'
+      message: 'Failed to generate daily report PDF'
     });
   }
 }

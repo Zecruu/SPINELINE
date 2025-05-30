@@ -8,13 +8,13 @@ const connectDB = async () => {
   if (isConnected && mongoose.connection.readyState === 1) {
     return;
   }
-
+  
   try {
     mongoose.set('strictQuery', false);
     mongoose.set('bufferCommands', false);
 
     const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI;
-
+    
     if (!mongoUri) {
       throw new Error('MongoDB URI not found in environment variables');
     }
@@ -69,17 +69,20 @@ export default async function handler(req, res) {
 
     await connectDB();
 
-    // Get today's date range
-    const today = new Date();
-    const startOfDay = new Date(today);
+    // Get date parameter (defaults to today)
+    const { date } = req.query;
+    const reportDate = date ? new Date(date) : new Date();
+    
+    // Set date range for the day
+    const startOfDay = new Date(reportDate);
     startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(today);
+    const endOfDay = new Date(reportDate);
     endOfDay.setHours(23, 59, 59, 999);
 
     // Use MongoDB native aggregation through mongoose connection
     const db = mongoose.connection.db;
 
-    // Get appointments with patient data
+    // Get appointments for the date
     const appointments = await db.collection('appointments').aggregate([
       {
         $match: {
@@ -99,38 +102,74 @@ export default async function handler(req, res) {
         }
       },
       {
-        $lookup: {
-          from: 'users',
-          localField: 'assignedDoctor',
-          foreignField: '_id',
-          as: 'doctor'
-        }
-      },
-      {
         $unwind: { path: '$patient', preserveNullAndEmptyArrays: true }
-      },
-      {
-        $unwind: { path: '$doctor', preserveNullAndEmptyArrays: true }
       },
       {
         $sort: { appointmentTime: 1 }
       }
     ]).toArray();
 
-    res.json({
-      success: true,
+    // Get checkout records for the date
+    const checkouts = await db.collection('checkouts').aggregate([
+      {
+        $match: {
+          clinicId,
+          checkoutDate: {
+            $gte: startOfDay,
+            $lte: endOfDay
+          }
+        }
+      },
+      {
+        $lookup: {
+          from: 'patients',
+          localField: 'patientId',
+          foreignField: '_id',
+          as: 'patient'
+        }
+      },
+      {
+        $unwind: { path: '$patient', preserveNullAndEmptyArrays: true }
+      }
+    ]).toArray();
+
+    // Calculate summary statistics
+    const totalAppointments = appointments.length;
+    const completedCheckouts = checkouts.length;
+    const scheduledAppointments = appointments.filter(apt => apt.status === 'Scheduled').length;
+    const checkedInAppointments = appointments.filter(apt => apt.status === 'Checked-In').length;
+    const checkedOutAppointments = appointments.filter(apt => apt.status === 'Checked-Out').length;
+
+    // Prepare report data
+    const reportData = {
+      date: reportDate.toLocaleDateString(),
+      summary: {
+        totalAppointments,
+        scheduledAppointments,
+        checkedInAppointments,
+        checkedOutAppointments,
+        completedCheckouts
+      },
       appointments: appointments.map(apt => ({
         ...apt,
-        patientName: apt.patient ? `${apt.patient.firstName} ${apt.patient.lastName}` : 'Unknown Patient',
-        doctorName: apt.doctor ? apt.doctor.name : 'Unassigned'
+        patientName: apt.patient ? `${apt.patient.firstName} ${apt.patient.lastName}` : 'Unknown Patient'
+      })),
+      checkouts: checkouts.map(checkout => ({
+        ...checkout,
+        patientName: checkout.patient ? `${checkout.patient.firstName} ${checkout.patient.lastName}` : 'Unknown Patient'
       }))
+    };
+
+    res.json({
+      success: true,
+      reportData
     });
 
   } catch (error) {
-    console.error('Error fetching today\'s appointments:', error);
+    console.error('Daily report error:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch appointments'
+      message: 'Failed to generate daily report'
     });
   }
 }
