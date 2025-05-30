@@ -35,9 +35,15 @@ const connectDB = async () => {
     console.log('🔍 URI format:', mongoUri.substring(0, 20) + '...');
 
     await mongoose.connect(mongoUri, {
-      serverSelectionTimeoutMS: 10000, // Increased timeout
+      serverSelectionTimeoutMS: 30000, // Increased timeout for serverless
       socketTimeoutMS: 45000,
-      bufferCommands: false
+      bufferCommands: true, // Allow buffering for serverless
+      bufferMaxEntries: 0, // Disable mongoose buffering
+      maxPoolSize: 10, // Maintain up to 10 socket connections
+      minPoolSize: 5, // Maintain a minimum of 5 socket connections
+      maxIdleTimeMS: 30000, // Close connections after 30 seconds of inactivity
+      serverSelectionRetryDelayMS: 5000, // Retry every 5 seconds
+      heartbeatFrequencyMS: 10000 // Send a ping every 10 seconds
     });
 
     isConnected = true;
