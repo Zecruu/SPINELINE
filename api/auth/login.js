@@ -1,4 +1,3 @@
-// User login endpoint
 import { connectToDatabase } from '../../lib/mongodb.js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';

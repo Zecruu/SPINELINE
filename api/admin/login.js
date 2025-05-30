@@ -1,7 +1,6 @@
-// Admin login endpoint
-const jwt = require('jsonwebtoken');
+import jwt from 'jsonwebtoken';
 
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   // Add CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -47,9 +46,9 @@ module.exports = async function handler(req, res) {
         token,
         user: {
           id: 'admin',
+          name: 'SpineLine Admin',
           email: adminEmail,
-          role: 'admin',
-          name: 'SpineLine Admin'
+          role: 'admin'
         }
       });
     }
