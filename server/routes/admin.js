@@ -17,6 +17,67 @@ router.get('/test', (req, res) => {
   });
 });
 
+// Test auth route to debug authentication (no auth required)
+router.get('/test-auth', (req, res) => {
+  try {
+    console.log('Admin test-auth route hit');
+    console.log('Headers received:', req.headers);
+
+    const authHeader = req.header('Authorization');
+    console.log('Authorization header:', authHeader);
+
+    const token = authHeader?.replace('Bearer ', '');
+    console.log('Token extracted:', token ? 'Token present' : 'No token');
+
+    if (!token) {
+      return res.json({
+        success: false,
+        message: 'No token provided',
+        debug: {
+          authHeader: authHeader,
+          headers: req.headers
+        }
+      });
+    }
+
+    const jwt = require('jsonwebtoken');
+    console.log('JWT_SECRET exists:', !!process.env.JWT_SECRET);
+
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      console.log('Token decoded successfully:', decoded);
+
+      res.json({
+        success: true,
+        message: 'Token is valid',
+        decoded: decoded,
+        debug: {
+          tokenLength: token.length,
+          jwtSecretExists: !!process.env.JWT_SECRET
+        }
+      });
+    } catch (jwtError) {
+      console.error('JWT verification error:', jwtError);
+      res.json({
+        success: false,
+        message: 'Token verification failed',
+        error: jwtError.message,
+        debug: {
+          tokenLength: token.length,
+          jwtSecretExists: !!process.env.JWT_SECRET
+        }
+      });
+    }
+  } catch (error) {
+    console.error('Test auth error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Test auth failed',
+      error: error.message
+    });
+  }
+});
+
 // Get all clinics (admin only)
 router.get('/clinics', verifyAdmin, async (req, res) => {
   try {
