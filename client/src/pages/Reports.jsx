@@ -6,12 +6,8 @@ import {
   CalendarIcon,
   DocumentArrowDownIcon,
   EnvelopeIcon,
-  FunnelIcon,
   ChartBarIcon,
   CurrencyDollarIcon,
-  ExclamationTriangleIcon,
-  UserGroupIcon,
-  ClockIcon,
   CheckCircleIcon,
   XCircleIcon,
   ArrowPathIcon
@@ -77,11 +73,12 @@ const Reports = () => {
       case 'today':
         startDate = endDate = today.toISOString().split('T')[0];
         break;
-      case 'week':
+      case 'week': {
         const weekStart = new Date(today.setDate(today.getDate() - today.getDay()));
         startDate = weekStart.toISOString().split('T')[0];
         endDate = new Date().toISOString().split('T')[0];
         break;
+      }
       case 'month':
         startDate = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
         endDate = new Date().toISOString().split('T')[0];

@@ -1,6 +1,9 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
+// Define process for ESLint
+const process = globalThis.process || { env: {} }
+
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
