@@ -208,6 +208,39 @@ app.post('/api/secret-admin/login', (req, res) => {
 
 // Remove mock data endpoints - database is working
 
+// Test endpoint to check database connection
+app.get('/api/test-db', async (req, res) => {
+  try {
+    const mongoose = require('mongoose');
+    const { User, Clinic } = require('../server/models');
+
+    console.log('MongoDB connection state:', mongoose.connection.readyState);
+    console.log('MongoDB connection name:', mongoose.connection.name);
+
+    // Test basic queries
+    const userCount = await User.countDocuments();
+    const clinicCount = await Clinic.countDocuments();
+
+    res.json({
+      success: true,
+      database: {
+        connected: mongoose.connection.readyState === 1,
+        name: mongoose.connection.name,
+        userCount,
+        clinicCount
+      },
+      message: 'Database test successful'
+    });
+  } catch (error) {
+    console.error('Database test error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      message: 'Database test failed'
+    });
+  }
+});
+
 // API Routes
 app.use('/api/secret-admin', require('../server/routes/admin'));
 app.use('/api/auth', require('../server/routes/auth'));
