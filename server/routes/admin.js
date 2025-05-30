@@ -7,6 +7,16 @@ const { User, Clinic } = require('../models');
 // Admin login route (no auth required)
 router.post('/login', adminLogin);
 
+// Test route to check if admin routes are mounted (no auth required)
+router.get('/test', (req, res) => {
+  console.log('Admin test route hit');
+  res.json({
+    success: true,
+    message: 'Admin routes are working',
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Get all clinics (admin only)
 router.get('/clinics', verifyAdmin, async (req, res) => {
   try {
