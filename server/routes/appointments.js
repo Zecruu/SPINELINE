@@ -1010,12 +1010,11 @@ router.post('/:id/checkout', async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: 'Server error processing checkout'
+      message: 'Checkout failed',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
     });
   }
 });
-
-
 
 // Save SOAP notes for appointment (doctor only)
 router.patch('/:id/soap-notes', async (req, res) => {

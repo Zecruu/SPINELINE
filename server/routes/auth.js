@@ -91,7 +91,8 @@ const userLogin = async (req, res) => {
     console.error('User login error:', error);
     res.status(500).json({
       success: false,
-      message: 'Server error during login'
+      message: 'Server error during login',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
     });
   }
 };

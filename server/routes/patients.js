@@ -1333,7 +1333,8 @@ router.get('/:patientId/appointments/history', verifyToken, async (req, res) => 
     console.error('Get appointment history error:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to get appointment history'
+      message: 'Failed to get appointment history',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
     });
   }
 });

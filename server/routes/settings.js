@@ -33,7 +33,8 @@ router.get('/users', verifyToken, async (req, res) => {
     console.error('Error fetching users:', error);
     res.status(500).json({
       success: false,
-      message: 'Server error fetching users'
+      message: 'Server error fetching users',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
     });
   }
 });

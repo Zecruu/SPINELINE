@@ -36,7 +36,8 @@ router.get('/procedures', verifyToken, async (req, res) => {
     console.error('Get procedure templates error:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to get procedure templates'
+      message: 'Failed to get procedure templates',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
     });
   }
 });

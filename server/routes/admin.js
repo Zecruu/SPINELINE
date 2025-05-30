@@ -61,7 +61,7 @@ router.get('/test-auth', (req, res) => {
       res.json({
         success: false,
         message: 'Token verification failed',
-        error: jwtError.message,
+        error: process.env.NODE_ENV === 'development' ? jwtError.message : 'Internal server error',
         debug: {
           tokenLength: token.length,
           jwtSecretExists: !!process.env.JWT_SECRET
@@ -73,7 +73,7 @@ router.get('/test-auth', (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Test auth failed',
-      error: error.message
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
     });
   }
 });
@@ -85,37 +85,13 @@ router.get('/clinics', verifyAdmin, async (req, res) => {
     console.log('Environment check - JWT_SECRET exists:', !!process.env.JWT_SECRET);
     console.log('Environment check - MONGO_URI exists:', !!process.env.MONGO_URI);
 
-    const mongoose = require('mongoose');
-    console.log('MongoDB connection state before:', mongoose.connection.readyState);
-
-    // Force connection attempt if not connected
-    if (mongoose.connection.readyState !== 1) {
-      console.log('MongoDB not connected, attempting to connect...');
-
-      const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI;
-      if (!mongoUri) {
-        throw new Error('MongoDB URI not found in environment variables');
-      }
-
-      try {
-        await mongoose.connect(mongoUri, {
-          serverSelectionTimeoutMS: 30000,
-          socketTimeoutMS: 45000,
-          bufferCommands: false,
-          maxPoolSize: 10,
-          minPoolSize: 1,
-          maxIdleTimeMS: 30000,
-          connectTimeoutMS: 30000,
-          family: 4
-        });
-        console.log('MongoDB connected successfully in route');
-      } catch (connectError) {
-        console.error('Failed to connect to MongoDB in route:', connectError);
-        throw new Error('Failed to establish database connection');
-      }
+    if (!isConnected()) {
+      return res.status(503).json({
+        success: false,
+        message: 'Database connection unavailable'
+      });
     }
 
-    console.log('MongoDB connection state after:', mongoose.connection.readyState);
     console.log('Executing clinics query...');
 
     const clinics = await Clinic.find({})
@@ -133,7 +109,7 @@ router.get('/clinics', verifyAdmin, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Server error fetching clinics',
-      error: error.message
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
     });
   }
 });
@@ -146,13 +122,11 @@ router.get('/users', verifyAdmin, async (req, res) => {
   try {
     console.log('Admin users route hit, user:', req.user);
 
-    const mongoose = require('mongoose');
-    console.log('MongoDB connection state:', mongoose.connection.readyState);
-
-    // Ensure connection is ready
-    if (mongoose.connection.readyState !== 1) {
-      console.log('MongoDB not connected, attempting to connect...');
-      throw new Error('Database connection not ready');
+    if (!isConnected()) {
+      return res.status(503).json({
+        success: false,
+        message: 'Database connection unavailable'
+      });
     }
 
     console.log('Executing users query...');
@@ -171,7 +145,7 @@ router.get('/users', verifyAdmin, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Server error fetching users',
-      error: error.message
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
     });
   }
 });

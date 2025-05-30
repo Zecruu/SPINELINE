@@ -293,12 +293,12 @@ router.get('/:doctorId/signature', verifyToken, async (req, res) => {
       success: true,
       signature: doctor.signatureImage || null
     });
-
   } catch (error) {
     console.error('Get doctor signature error:', error);
     res.status(500).json({
       success: false,
-      message: 'Server error getting doctor signature'
+      message: 'Server error getting doctor signature',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
     });
   }
 });
@@ -328,12 +328,12 @@ router.patch('/:doctorId/signature', verifyToken, async (req, res) => {
       message: 'Signature saved successfully',
       doctor: doctor
     });
-
   } catch (error) {
     console.error('Save doctor signature error:', error);
     res.status(500).json({
       success: false,
-      message: 'Server error saving doctor signature'
+      message: 'Server error saving doctor signature',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
     });
   }
 });

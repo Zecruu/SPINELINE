@@ -388,7 +388,8 @@ router.get('/patient/:patientId', verifyToken, async (req, res) => {
     console.error('Error fetching patient ledger:', error);
     res.status(500).json({
       success: false,
-      message: 'Server error fetching patient ledger'
+      message: 'Server error fetching patient ledger',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
     });
   }
 });

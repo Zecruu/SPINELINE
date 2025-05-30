@@ -48,7 +48,8 @@ router.get('/', verifyToken, async (req, res) => {
     console.error('Get service codes error:', error);
     res.status(500).json({
       success: false,
-      message: 'Server error fetching service codes'
+      message: 'Server error getting service codes',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
     });
   }
 });

@@ -59,7 +59,8 @@ router.get('/', verifyToken, async (req, res) => {
     console.error('Get SOAP templates error:', error);
     res.status(500).json({
       success: false,
-      message: 'Server error fetching SOAP templates'
+      message: 'Failed to get SOAP templates',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
     });
   }
 });

@@ -30,7 +30,8 @@ router.get('/', verifyToken, async (req, res) => {
     console.error('Get diagnostic codes error:', error);
     res.status(500).json({
       success: false,
-      message: 'Server error retrieving diagnostic codes'
+      message: 'Server error retrieving diagnostic codes',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
     });
   }
 });

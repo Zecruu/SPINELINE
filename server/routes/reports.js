@@ -413,7 +413,8 @@ router.get('/doctor/dashboard', verifyToken, async (req, res) => {
     console.error('Error generating doctor dashboard data:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to generate dashboard data'
+      message: 'Failed to generate dashboard data',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
     });
   }
 });

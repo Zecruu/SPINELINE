@@ -150,14 +150,25 @@ router.get('/download-pdf', verifyToken, async (req, res) => {
     console.error('❌ Download PDF failed:', error);
     res.status(500).json({
       success: false,
-      message: 'Download PDF failed',
-      error: error.message
+      message: 'Audit API error',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
     });
   }
 });
 
 // Generate ZIP file with all PDFs
-router.post('/download-all-pdfs', verifyToken, generateAllPDFs);
+router.post('/download-all-pdfs', verifyToken, async (req, res) => {
+  try {
+    await generateAllPDFs(req, res);
+  } catch (error) {
+    console.error('❌ Download all PDFs failed:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Audit API error',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+    });
+  }
+});
 
 // Email PDF
 router.post('/email-pdf', verifyToken, emailPDF);
