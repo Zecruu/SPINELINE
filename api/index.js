@@ -71,17 +71,27 @@ app.use(express.urlencoded({ extended: true }));
 // Serve static files for uploads
 app.use('/uploads', express.static(path.join(__dirname, '../server/uploads')));
 
-// Database connection middleware (less strict for login)
+// Database connection middleware (with fallback)
 app.use(async (req, res, next) => {
   try {
     await connectDB();
+    req.dbConnected = true;
     next();
   } catch (error) {
     console.error('Database connection failed:', error);
+    req.dbConnected = false;
 
-    // Allow login route to proceed even without DB connection (uses hardcoded admin)
-    if (req.path === '/api/secret-admin/login') {
-      console.log('Allowing login route to proceed without DB connection');
+    // Allow certain routes to proceed with mock data
+    const allowedRoutes = [
+      '/api/secret-admin/login',
+      '/api/secret-admin/clinics',
+      '/api/secret-admin/users',
+      '/api/health',
+      '/api/test-db'
+    ];
+
+    if (allowedRoutes.some(route => req.path.startsWith(route))) {
+      console.log('Allowing route to proceed with mock data:', req.path);
       next();
     } else {
       res.status(503).json({
@@ -190,6 +200,53 @@ app.post('/api/secret-admin/login', (req, res) => {
       message: 'Server error during login'
     });
   }
+});
+
+// Mock data endpoints (when DB is not available)
+app.get('/api/secret-admin/clinics', (req, res) => {
+  if (!req.dbConnected) {
+    return res.json({
+      success: true,
+      clinics: [],
+      message: 'Database connection unavailable - showing empty data'
+    });
+  }
+  // If DB is connected, this will be handled by the admin routes below
+  next();
+});
+
+app.get('/api/secret-admin/users', (req, res) => {
+  if (!req.dbConnected) {
+    return res.json({
+      success: true,
+      users: [],
+      message: 'Database connection unavailable - showing empty data'
+    });
+  }
+  // If DB is connected, this will be handled by the admin routes below
+  next();
+});
+
+app.post('/api/secret-admin/clinics', (req, res) => {
+  if (!req.dbConnected) {
+    return res.status(503).json({
+      success: false,
+      message: 'Database connection unavailable. Cannot create clinic at this time.'
+    });
+  }
+  // If DB is connected, this will be handled by the admin routes below
+  next();
+});
+
+app.post('/api/secret-admin/users', (req, res) => {
+  if (!req.dbConnected) {
+    return res.status(503).json({
+      success: false,
+      message: 'Database connection unavailable. Cannot create user at this time.'
+    });
+  }
+  // If DB is connected, this will be handled by the admin routes below
+  next();
 });
 
 // API Routes
