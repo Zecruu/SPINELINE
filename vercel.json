@@ -4,15 +4,11 @@
   "buildCommand": "cd client && npm ci && npm run build",
   "outputDirectory": "client/dist",
   "functions": {
-    "api/index.js": {
+    "api/**/*.js": {
       "maxDuration": 30
     }
   },
   "rewrites": [
-    {
-      "source": "/api/(.*)",
-      "destination": "/api/index.js?path=$1"
-    },
     {
       "source": "/secret-admin/(.*)",
       "destination": "/index.html"
