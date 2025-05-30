@@ -1,6 +1,67 @@
-import { connectToDatabase } from '../../lib/mongodb.js';
+import mongoose from 'mongoose';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+
+// MongoDB connection
+let isConnected = false;
+
+const connectDB = async () => {
+  if (isConnected && mongoose.connection.readyState === 1) {
+    return;
+  }
+
+  try {
+    mongoose.set('strictQuery', false);
+    mongoose.set('bufferCommands', false);
+
+    const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI;
+
+    if (!mongoUri) {
+      throw new Error('MongoDB URI not found in environment variables');
+    }
+
+    await mongoose.connect(mongoUri, {
+      serverSelectionTimeoutMS: 30000,
+      socketTimeoutMS: 45000,
+      bufferCommands: false,
+      maxPoolSize: 10,
+      minPoolSize: 1,
+      maxIdleTimeMS: 30000,
+      heartbeatFrequencyMS: 10000,
+      connectTimeoutMS: 30000,
+      family: 4
+    });
+
+    isConnected = true;
+    console.log('✅ MongoDB Connected Successfully!');
+  } catch (error) {
+    console.error('❌ MongoDB Connection Failed:', error.message);
+    isConnected = false;
+    throw error;
+  }
+};
+
+// User Schema
+const userSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  email: { type: String, required: true },
+  password: { type: String, required: true },
+  role: { type: String, enum: ['doctor', 'secretary', 'admin'], default: 'doctor' },
+  clinicId: { type: String, required: true },
+  isActive: { type: Boolean, default: true },
+  lastLogin: { type: Date }
+}, { timestamps: true });
+
+const User = mongoose.models.User || mongoose.model('User', userSchema);
+
+// Clinic Schema
+const clinicSchema = new mongoose.Schema({
+  clinicName: { type: String, required: true },
+  clinicId: { type: String, required: true, unique: true },
+  isActive: { type: Boolean, default: true }
+}, { timestamps: true });
+
+const Clinic = mongoose.models.Clinic || mongoose.model('Clinic', clinicSchema);
 
 export default async function handler(req, res) {
   // Add CORS headers
@@ -29,14 +90,14 @@ export default async function handler(req, res) {
       });
     }
 
-    const { db } = await connectToDatabase();
+    await connectDB();
 
     // Find user
-    const user = await db.collection('users').findOne({
+    const user = await User.findOne({
       email: email.toLowerCase(),
       clinicId: clinicId.toUpperCase(),
       isActive: true
-    });
+    }).lean();
 
     if (!user) {
       return res.status(401).json({
@@ -46,7 +107,7 @@ export default async function handler(req, res) {
     }
 
     // Check clinic
-    const clinic = await db.collection('clinics').findOne({
+    const clinic = await Clinic.findOne({
       clinicId: clinicId.toUpperCase(),
       isActive: true
     });
@@ -78,10 +139,7 @@ export default async function handler(req, res) {
     }
 
     // Update last login
-    await db.collection('users').updateOne(
-      { _id: user._id },
-      { $set: { lastLogin: new Date() } }
-    );
+    await User.findByIdAndUpdate(user._id, { lastLogin: new Date() });
 
     // Generate token
     const token = jwt.sign({
