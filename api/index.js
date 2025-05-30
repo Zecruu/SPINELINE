@@ -2,13 +2,43 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const path = require('path');
-const { connectDB } = require('../server/config/db');
+const mongoose = require('mongoose');
 
 // Load environment variables
 dotenv.config();
 
-// Connect to MongoDB
-connectDB();
+// MongoDB connection for serverless
+let isConnected = false;
+
+const connectDB = async () => {
+  if (isConnected) {
+    return;
+  }
+
+  try {
+    mongoose.set('strictQuery', false);
+
+    const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI;
+    if (!mongoUri) {
+      throw new Error('MongoDB URI not found in environment variables');
+    }
+
+    await mongoose.connect(mongoUri, {
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+      bufferCommands: false,
+      bufferMaxEntries: 0,
+      useNewUrlParser: true,
+      useUnifiedTopology: true
+    });
+
+    isConnected = true;
+    console.log('✅ MongoDB Connected Successfully!');
+  } catch (error) {
+    console.error('❌ MongoDB Connection Failed:', error.message);
+    throw error;
+  }
+};
 
 const app = express();
 
@@ -22,6 +52,20 @@ app.use(express.urlencoded({ extended: true }));
 
 // Serve static files for uploads
 app.use('/uploads', express.static(path.join(__dirname, '../server/uploads')));
+
+// Database connection middleware
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (error) {
+    console.error('Database connection failed:', error);
+    res.status(503).json({
+      message: 'Database connection failed',
+      error: 'Service temporarily unavailable'
+    });
+  }
+});
 
 // Request logging middleware
 app.use((req, res, next) => {

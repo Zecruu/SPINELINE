@@ -30,7 +30,8 @@
     "NODE_ENV": "production",
     "ADMIN_EMAIL": "admin@spineline.com",
     "ADMIN_PASSWORD": "SpineLine2024!",
-    "MONGODB_URI": "mongodb+srv://nomnk5138:Redzone12@spinev0.zbqy7hv.mongodb.net/?retryWrites=true&w=majority&appName=spinev0"
+    "MONGODB_URI": "mongodb+srv://nomnk5138:Redzone12@spinev0.zbqy7hv.mongodb.net/?retryWrites=true&w=majority&appName=spinev0",
+    "MONGO_URI": "mongodb+srv://nomnk5138:Redzone12@spinev0.zbqy7hv.mongodb.net/?retryWrites=true&w=majority&appName=spinev0"
   },
   "headers": [
     {
