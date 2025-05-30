@@ -1,9 +1,8 @@
 {
   "version": 2,
   "name": "spineline",
-  "buildCommand": "cd client && npm run build",
+  "buildCommand": "cd client && npm install && npm run build",
   "outputDirectory": "client/dist",
-  "installCommand": "npm install && cd client && npm install && cd server && npm install",
   "functions": {
     "api/index.js": {
       "maxDuration": 30
