@@ -129,6 +129,11 @@ export default async function handler(req, res) {
       success: true,
       appointments: appointments.map(apt => ({
         ...apt,
+        // Ensure patient object has the expected structure
+        patient: apt.patient ? {
+          ...apt.patient,
+          fullName: apt.patient.fullName || `${apt.patient.firstName} ${apt.patient.lastName}`
+        } : null,
         patientName: apt.patient ? `${apt.patient.firstName} ${apt.patient.lastName}` : 'Unknown Patient',
         doctorName: apt.doctor ? apt.doctor.name : 'Unassigned'
       })),
@@ -145,7 +150,8 @@ export default async function handler(req, res) {
     console.error('Error fetching appointment history:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch appointment history'
+      message: 'Failed to fetch appointment history',
+      appointments: [] // Provide empty array as fallback
     });
   }
 }

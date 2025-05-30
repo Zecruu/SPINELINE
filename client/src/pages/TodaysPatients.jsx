@@ -119,24 +119,31 @@ const TodaysPatients = () => {
       if (response.data.success) {
         console.log('✅ API call successful!');
         console.log('📅 Today\'s appointments loaded:', response.data.appointments);
-        console.log('📊 Total appointments:', response.data.appointments.length);
-        console.log('📋 Scheduled appointments:', response.data.appointments.filter(apt => apt.status === 'Scheduled').length);
-        console.log('📋 Checked-In appointments:', response.data.appointments.filter(apt => apt.status === 'Checked-In').length);
-        console.log('📋 In Progress appointments:', response.data.appointments.filter(apt => apt.status === 'In Progress').length);
+
+        // Ensure appointments is always an array
+        const appointmentsArray = response.data.appointments || [];
+        console.log('📊 Total appointments:', appointmentsArray.length);
+        console.log('📋 Scheduled appointments:', appointmentsArray.filter(apt => apt.status === 'Scheduled').length);
+        console.log('📋 Checked-In appointments:', appointmentsArray.filter(apt => apt.status === 'Checked-In').length);
+        console.log('📋 In Progress appointments:', appointmentsArray.filter(apt => apt.status === 'In Progress').length);
 
         // Debug each appointment
-        response.data.appointments.forEach(apt => {
-          console.log(`  📋 ${apt.patient.fullName} - Status: ${apt.status} - Time: ${apt.appointmentTime} - ID: ${apt._id}`);
+        appointmentsArray.forEach(apt => {
+          console.log(`  📋 ${apt.patient?.fullName || 'Unknown'} - Status: ${apt.status} - Time: ${apt.appointmentTime} - ID: ${apt._id}`);
         });
 
-        setAppointments(response.data.appointments);
+        setAppointments(appointmentsArray);
       } else {
         console.error('❌ API returned success: false');
         console.error('❌ Failed to load appointments:', response.data.message);
+        // Set empty array on failure
+        setAppointments(response.data.appointments || []);
       }
     } catch (error) {
       console.error('❌ Load appointments error:', error);
       console.error('❌ Error details:', error.response?.data);
+      // Set empty array on error to prevent undefined issues
+      setAppointments([]);
     } finally {
       setLoading(false);
     }
