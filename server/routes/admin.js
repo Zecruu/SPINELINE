@@ -85,9 +85,20 @@ router.get('/clinics', verifyAdmin, async (req, res) => {
     console.log('Environment check - JWT_SECRET exists:', !!process.env.JWT_SECRET);
     console.log('Environment check - MONGO_URI exists:', !!process.env.MONGO_URI);
 
+    const mongoose = require('mongoose');
+    console.log('MongoDB connection state:', mongoose.connection.readyState);
+
+    // Ensure connection is ready
+    if (mongoose.connection.readyState !== 1) {
+      console.log('MongoDB not connected, attempting to connect...');
+      throw new Error('Database connection not ready');
+    }
+
+    console.log('Executing clinics query...');
     const clinics = await Clinic.find({})
       .select('clinicName clinicId contactInfo isActive createdAt')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .maxTimeMS(30000); // 30 second timeout for the query
 
     console.log('Found clinics:', clinics.length);
     res.json({
@@ -111,9 +122,21 @@ router.post('/clinics', verifyAdmin, createClinic);
 router.get('/users', verifyAdmin, async (req, res) => {
   try {
     console.log('Admin users route hit, user:', req.user);
+
+    const mongoose = require('mongoose');
+    console.log('MongoDB connection state:', mongoose.connection.readyState);
+
+    // Ensure connection is ready
+    if (mongoose.connection.readyState !== 1) {
+      console.log('MongoDB not connected, attempting to connect...');
+      throw new Error('Database connection not ready');
+    }
+
+    console.log('Executing users query...');
     const users = await User.find({ role: { $ne: 'admin' } })
       .select('name email role clinicId isActive createdAt lastLogin')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .maxTimeMS(30000); // 30 second timeout for the query
 
     console.log('Found users:', users.length);
     res.json({

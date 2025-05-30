@@ -11,12 +11,15 @@ dotenv.config();
 let isConnected = false;
 
 const connectDB = async () => {
-  if (isConnected) {
+  if (isConnected && mongoose.connection.readyState === 1) {
     return;
   }
 
   try {
+    // Disable Mongoose buffering globally
     mongoose.set('strictQuery', false);
+    mongoose.set('bufferCommands', false);
+    mongoose.set('bufferMaxEntries', 0);
 
     const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI;
     console.log('🔍 Attempting MongoDB connection...');
@@ -37,21 +40,26 @@ const connectDB = async () => {
     await mongoose.connect(mongoUri, {
       serverSelectionTimeoutMS: 30000, // Increased timeout for serverless
       socketTimeoutMS: 45000,
-      bufferCommands: true, // Allow buffering for serverless
+      bufferCommands: false, // Disable buffering completely
       bufferMaxEntries: 0, // Disable mongoose buffering
       maxPoolSize: 10, // Maintain up to 10 socket connections
-      minPoolSize: 5, // Maintain a minimum of 5 socket connections
+      minPoolSize: 1, // Minimum connections
       maxIdleTimeMS: 30000, // Close connections after 30 seconds of inactivity
       serverSelectionRetryDelayMS: 5000, // Retry every 5 seconds
-      heartbeatFrequencyMS: 10000 // Send a ping every 10 seconds
+      heartbeatFrequencyMS: 10000, // Send a ping every 10 seconds
+      connectTimeoutMS: 30000, // Connection timeout
+      family: 4 // Use IPv4, skip trying IPv6
     });
 
     isConnected = true;
     console.log('✅ MongoDB Connected Successfully!');
     console.log('✅ Connection state:', mongoose.connection.readyState);
+    console.log('✅ Host:', mongoose.connection.host);
+    console.log('✅ Database:', mongoose.connection.name);
   } catch (error) {
     console.error('❌ MongoDB Connection Failed:', error.message);
     console.error('❌ Error details:', error);
+    isConnected = false;
     throw error;
   }
 };
