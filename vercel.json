@@ -31,7 +31,9 @@
     "ADMIN_EMAIL": "admin@spineline.com",
     "ADMIN_PASSWORD": "SpineLine2024!",
     "MONGODB_URI": "mongodb+srv://nomnk5138:Redzone12@spinev0.zbqy7hv.mongodb.net/spineline?retryWrites=true&w=majority&appName=spinev0",
-    "MONGO_URI": "mongodb+srv://nomnk5138:Redzone12@spinev0.zbqy7hv.mongodb.net/spineline?retryWrites=true&w=majority&appName=spinev0"
+    "MONGO_URI": "mongodb+srv://nomnk5138:Redzone12@spinev0.zbqy7hv.mongodb.net/spineline?retryWrites=true&w=majority&appName=spinev0",
+    "JWT_SECRET": "spineline-secret-key-2024-production",
+    "JWT_EXPIRES_IN": "24h"
   },
   "headers": [
     {

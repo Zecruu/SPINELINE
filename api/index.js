@@ -169,19 +169,26 @@ app.post('/api/secret-admin/login', (req, res) => {
     const adminPassword = process.env.ADMIN_PASSWORD || 'SpineLine2024!';
 
     if (email === adminEmail && password === adminPassword) {
-      // Generate simple token (for now)
-      const token = 'admin-token-' + Date.now();
+      // Generate proper JWT token
+      const jwt = require('jsonwebtoken');
+      const jwtSecret = process.env.JWT_SECRET || 'spineline-secret-key-2024';
+
+      const payload = {
+        id: 'admin',
+        email: adminEmail,
+        role: 'admin',
+        name: 'SpineLine Admin'
+      };
+
+      const token = jwt.sign(payload, jwtSecret, {
+        expiresIn: '2h'
+      });
 
       return res.json({
         success: true,
         message: 'Admin login successful',
         token,
-        user: {
-          id: 'admin',
-          email: adminEmail,
-          role: 'admin',
-          name: 'SpineLine Admin'
-        }
+        user: payload
       });
     }
 
