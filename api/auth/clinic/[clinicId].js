@@ -1,5 +1,5 @@
 // Clinic validation endpoint for Vercel
-import mongoose from 'mongoose';
+const mongoose = require('mongoose');
 
 // MongoDB connection
 let isConnected = false;
@@ -8,13 +8,13 @@ const connectDB = async () => {
   if (isConnected && mongoose.connection.readyState === 1) {
     return;
   }
-  
+
   try {
     mongoose.set('strictQuery', false);
     mongoose.set('bufferCommands', false);
 
     const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI;
-    
+
     if (!mongoUri) {
       throw new Error('MongoDB URI not found in environment variables');
     }
@@ -62,15 +62,25 @@ const clinicSchema = new mongoose.Schema({
 
 const Clinic = mongoose.models.Clinic || mongoose.model('Clinic', clinicSchema);
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
+  // Add CORS headers
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
   if (req.method !== 'GET') {
-    return res.status(405).json({ 
-      success: false, 
-      message: 'Method not allowed' 
+    return res.status(405).json({
+      success: false,
+      message: 'Method not allowed'
     });
   }
 
   try {
+    console.log('Clinic validation request:', req.url, req.query);
     const { clinicId } = req.query;
 
     if (!clinicId) {
@@ -84,7 +94,7 @@ export default async function handler(req, res) {
     await connectDB();
 
     console.log(`Fetching clinic info for ID: ${clinicId}`);
-    
+
     const clinic = await Clinic.findOne({
       clinicId: clinicId.toUpperCase(),
       isActive: true
@@ -99,7 +109,7 @@ export default async function handler(req, res) {
     }
 
     console.log(`Found clinic: ${clinic.clinicName} (${clinic.clinicId})`);
-    
+
     res.json({
       success: true,
       clinic: {
@@ -112,10 +122,12 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('Get clinic info error:', error);
+    console.error('Error stack:', error.stack);
     res.status(500).json({
       success: false,
       message: 'Server error getting clinic info',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 }

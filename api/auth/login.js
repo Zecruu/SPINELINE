@@ -1,7 +1,7 @@
 // User login endpoint for Vercel
-import mongoose from 'mongoose';
-import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
+const mongoose = require('mongoose');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 
 // MongoDB connection
 let isConnected = false;
@@ -10,13 +10,13 @@ const connectDB = async () => {
   if (isConnected && mongoose.connection.readyState === 1) {
     return;
   }
-  
+
   try {
     mongoose.set('strictQuery', false);
     mongoose.set('bufferCommands', false);
 
     const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI;
-    
+
     if (!mongoUri) {
       throw new Error('MongoDB URI not found in environment variables');
     }
@@ -68,11 +68,20 @@ const clinicSchema = new mongoose.Schema({
 
 const Clinic = mongoose.models.Clinic || mongoose.model('Clinic', clinicSchema);
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
+  // Add CORS headers
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
   if (req.method !== 'POST') {
-    return res.status(405).json({ 
-      success: false, 
-      message: 'Method not allowed' 
+    return res.status(405).json({
+      success: false,
+      message: 'Method not allowed'
     });
   }
 
@@ -91,7 +100,7 @@ export default async function handler(req, res) {
     await connectDB();
 
     // Find user by email and clinic ID
-    const user = await User.findOne({ 
+    const user = await User.findOne({
       email: email.toLowerCase(),
       clinicId: clinicId.toUpperCase(),
       isActive: true
@@ -105,9 +114,9 @@ export default async function handler(req, res) {
     }
 
     // Check if clinic is active
-    const clinic = await Clinic.findOne({ 
+    const clinic = await Clinic.findOne({
       clinicId: clinicId.toUpperCase(),
-      isActive: true 
+      isActive: true
     });
 
     if (!clinic) {
