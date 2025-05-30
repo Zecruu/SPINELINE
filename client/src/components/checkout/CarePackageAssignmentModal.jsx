@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  XMarkIcon, 
+import { useState, useEffect } from 'react';
+import {
+  XMarkIcon,
   MagnifyingGlassIcon,
   CheckIcon,
   CubeIcon,
@@ -73,7 +73,7 @@ const CarePackageAssignmentModal = ({
   // Filter packages based on search
   const filteredPackages = availablePackages.filter(pkg => {
     if (!searchTerm) return true;
-    
+
     const searchLower = searchTerm.toLowerCase();
     return (
       pkg.code.toLowerCase().includes(searchLower) ||

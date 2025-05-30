@@ -379,7 +379,8 @@ class SignaturePadManager {
    * Capture signature from ePad using HID communication
    */
   async captureEPadViaHID(pad) {
-    return new Promise(async (resolve, reject) => {
+    return new Promise((resolve, reject) => {
+      const performCapture = async () => {
       try {
         const device = pad.device;
 
@@ -437,6 +438,9 @@ class SignaturePadManager {
       } catch (error) {
         reject(error);
       }
+      };
+
+      performCapture();
     });
   }
 

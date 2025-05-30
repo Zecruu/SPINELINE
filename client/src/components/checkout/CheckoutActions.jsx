@@ -1,8 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useRef } from 'react';
 import {
   PlusIcon,
   XMarkIcon,
-  MagnifyingGlassIcon,
   DocumentTextIcon,
   CubeIcon,
   CalendarIcon,
@@ -13,7 +12,6 @@ import {
 import SignatureCanvas from 'react-signature-canvas';
 // import SignaturePadManager from '../signature/SignaturePadManager.js';
 import { HardwarePadDetector } from '../signature/HardwarePadDetector.js';
-import EPadBridge from '../signature/EPadBridge.js';
 
 import ServiceCodeSelectionModal from './ServiceCodeSelectionModal.jsx';
 import DiagnosticCodeSelectionModal from './DiagnosticCodeSelectionModal.jsx';

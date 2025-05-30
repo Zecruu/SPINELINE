@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  XMarkIcon, 
+import { useState, useEffect } from 'react';
+import {
+  XMarkIcon,
   MagnifyingGlassIcon,
   CheckIcon,
-  DocumentTextIcon,
   ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
 
@@ -111,7 +110,7 @@ const DiagnosticCodeSelectionModal = ({
   // Filter diagnostic codes based on search
   const filteredDiagnosticCodes = diagnosticCodes.filter(code => {
     if (!searchTerm) return true;
-    
+
     const searchLower = searchTerm.toLowerCase();
     return (
       code.code.toLowerCase().includes(searchLower) ||
@@ -149,7 +148,7 @@ const DiagnosticCodeSelectionModal = ({
       if (!hasPrimary && selectedDiagnosticCodes.length > 0) {
         selectedDiagnosticCodes[0].isPrimary = true;
       }
-      
+
       onSelectCodes(selectedDiagnosticCodes);
       onClose();
     }

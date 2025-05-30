@@ -9,7 +9,7 @@ class EPadBridge {
     this.device = null;
     this.signatureData = null;
     this.eventListeners = new Map();
-    
+
     // Try to detect if Generic ePad Test Utility is available
     this.detectEPadUtility();
   }
@@ -24,7 +24,7 @@ class EPadBridge {
         method: 'GET',
         mode: 'cors'
       });
-      
+
       if (response.ok) {
         this.isConnected = true;
         this.emit('connected');
@@ -47,7 +47,7 @@ class EPadBridge {
         this.tryDirectHIDAccess();
       }
     }
-    
+
     return false;
   }
 
@@ -63,8 +63,8 @@ class EPadBridge {
 
       // Get already connected devices first
       const devices = await navigator.hid.getDevices();
-      const ePadDevice = devices.find(device => 
-        device.vendorId === 0x7fcd || 
+      const ePadDevice = devices.find(device =>
+        device.vendorId === 0x7fcd ||
         device.productId === 0x9512 ||
         device.productName?.toLowerCase().includes('epad')
       );
@@ -107,7 +107,7 @@ class EPadBridge {
     if (this.isConnected) {
       return true;
     }
-    
+
     return await this.detectEPadUtility();
   }
 
@@ -131,15 +131,15 @@ class EPadBridge {
       if (await this.captureViaHTTP(config)) {
         return this.signatureData;
       }
-      
+
       // Try WebSocket API
       if (await this.captureViaWebSocket(config)) {
         return this.signatureData;
       }
-      
+
       // Try direct HID communication
       return await this.captureViaHID(config);
-      
+
     } catch (error) {
       console.error('ePad capture failed:', error);
       throw error;
@@ -181,7 +181,7 @@ class EPadBridge {
     return new Promise((resolve, reject) => {
       try {
         const ws = new WebSocket('ws://localhost:8081/epad');
-        
+
         ws.onopen = () => {
           ws.send(JSON.stringify({
             command: 'startCapture',
@@ -225,7 +225,8 @@ class EPadBridge {
    * Capture signature via direct HID communication
    */
   async captureViaHID(config) {
-    return new Promise(async (resolve, reject) => {
+    return new Promise((resolve, reject) => {
+      const performCapture = async () => {
       try {
         if (!this.device.opened) {
           await this.device.open();
@@ -237,7 +238,7 @@ class EPadBridge {
 
         const handleInput = (event) => {
           const data = new Uint8Array(event.data.buffer);
-          
+
           // Parse your specific ePad protocol
           // Adjust these values based on your device's actual data format
           if (data.length >= 6) {
@@ -299,6 +300,9 @@ class EPadBridge {
       } catch (error) {
         reject(error);
       }
+      };
+
+      performCapture();
     });
   }
 
@@ -357,7 +361,7 @@ class EPadBridge {
    */
   async clear() {
     this.signatureData = null;
-    
+
     if (this.device && this.device.opened) {
       try {
         const clearCommand = new Uint8Array([0x02, 0x00, 0x00, 0x00]);
