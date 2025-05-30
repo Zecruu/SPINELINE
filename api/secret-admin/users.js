@@ -10,13 +10,13 @@ const connectDB = async () => {
   if (isConnected && mongoose.connection.readyState === 1) {
     return;
   }
-  
+
   try {
     mongoose.set('strictQuery', false);
     mongoose.set('bufferCommands', false);
 
     const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI;
-    
+
     if (!mongoUri) {
       throw new Error('MongoDB URI not found in environment variables');
     }
@@ -77,11 +77,11 @@ const verifyAdmin = (req) => {
 
   const token = authHeader.substring(7);
   const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret');
-  
+
   if (decoded.role !== 'admin') {
     throw new Error('Admin access required');
   }
-  
+
   return decoded;
 };
 
@@ -98,7 +98,7 @@ module.exports = async function handler(req, res) {
   try {
     // Verify admin access
     verifyAdmin(req);
-    
+
     // Connect to database
     await connectDB();
 
@@ -106,8 +106,14 @@ module.exports = async function handler(req, res) {
       // Get all users
       const users = await User.find()
         .select('name email role clinicId isActive lastLogin createdAt')
-        .populate('clinic', 'clinicName')
         .lean();
+
+      // Get clinic names separately to avoid populate issues
+      const clinics = await Clinic.find().lean();
+      const clinicMap = {};
+      clinics.forEach(clinic => {
+        clinicMap[clinic.clinicId] = clinic.clinicName;
+      });
 
       res.json({
         success: true,
@@ -117,7 +123,7 @@ module.exports = async function handler(req, res) {
           email: user.email,
           role: user.role,
           clinicId: user.clinicId,
-          clinicName: user.clinic?.clinicName || 'Unknown',
+          clinicName: clinicMap[user.clinicId] || 'Unknown',
           isActive: user.isActive,
           lastLogin: user.lastLogin,
           createdAt: user.createdAt
@@ -189,7 +195,7 @@ module.exports = async function handler(req, res) {
     } else if (req.method === 'DELETE') {
       // Delete user
       const { userId } = req.query;
-      
+
       if (!userId) {
         return res.status(400).json({
           success: false,
@@ -219,7 +225,7 @@ module.exports = async function handler(req, res) {
 
   } catch (error) {
     console.error('Admin users error:', error);
-    
+
     if (error.message === 'No token provided' || error.message === 'Admin access required') {
       return res.status(401).json({
         success: false,
