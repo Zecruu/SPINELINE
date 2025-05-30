@@ -11,6 +11,9 @@ router.post('/login', adminLogin);
 router.get('/clinics', verifyAdmin, async (req, res) => {
   try {
     console.log('Admin clinics route hit, user:', req.user);
+    console.log('Environment check - JWT_SECRET exists:', !!process.env.JWT_SECRET);
+    console.log('Environment check - MONGO_URI exists:', !!process.env.MONGO_URI);
+
     const clinics = await Clinic.find({})
       .select('clinicName clinicId contactInfo isActive createdAt')
       .sort({ createdAt: -1 });

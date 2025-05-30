@@ -34,26 +34,35 @@ const verifyToken = async (req, res, next) => {
 // Middleware to verify admin access
 const verifyAdmin = async (req, res, next) => {
   try {
+    console.log('verifyAdmin middleware called');
+    console.log('Headers:', req.headers);
+
     const token = req.header('Authorization')?.replace('Bearer ', '');
+    console.log('Token extracted:', token ? 'Token present' : 'No token');
 
     if (!token) {
+      console.log('No token provided');
       return res.status(401).json({
         success: false,
         message: 'Access denied. No token provided.'
       });
     }
 
+    console.log('JWT_SECRET exists:', !!process.env.JWT_SECRET);
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    console.log('Token decoded successfully:', decoded);
     req.user = decoded;
 
     // Check if user has admin role
     if (req.user.role !== 'admin') {
+      console.log('User role is not admin:', req.user.role);
       return res.status(403).json({
         success: false,
         message: 'Access denied. Admin privileges required.'
       });
     }
 
+    console.log('Admin verification successful');
     next();
   } catch (error) {
     console.error('Admin verification error:', error);
