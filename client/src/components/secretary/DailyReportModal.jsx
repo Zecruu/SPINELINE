@@ -97,6 +97,29 @@ const DailyReportModal = ({ isOpen, onClose, selectedDate = new Date() }) => {
     }
   };
 
+  const handleProductionReport = async () => {
+    try {
+      const token = localStorage.getItem('userToken');
+      const dateStr = selectedDate.toISOString().split('T')[0];
+
+      const response = await axios.get(`/api/reports/production?date=${dateStr}`, {
+        headers: { Authorization: `Bearer ${token}` },
+        responseType: 'blob'
+      });
+
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `production-report-${dateStr}.pdf`;
+      link.click();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error downloading production report:', error);
+      alert('Failed to generate production report');
+    }
+  };
+
   const getFilteredAppointments = () => {
     if (!reportData?.appointments) return [];
 
@@ -170,6 +193,13 @@ const DailyReportModal = ({ isOpen, onClose, selectedDate = new Date() }) => {
                 >
                   <EnvelopeIcon className="h-4 w-4 mr-2" />
                   Email
+                </button>
+                <button
+                  onClick={handleProductionReport}
+                  className="inline-flex items-center px-3 py-2 border border-green-600 text-sm font-medium rounded-md text-green-400 bg-transparent hover:bg-green-600 hover:text-white transition-colors"
+                >
+                  <DocumentTextIcon className="h-4 w-4 mr-2" />
+                  📊 Production Report
                 </button>
                 <button
                   onClick={onClose}

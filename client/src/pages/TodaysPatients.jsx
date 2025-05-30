@@ -373,16 +373,6 @@ const TodaysPatients = () => {
               <ArrowPathIcon className="h-4 w-4 mr-2" />
               Refresh
             </button>
-            <button
-              onClick={() => {
-                console.log('🔄 Force reload triggered');
-                window.location.reload();
-              }}
-              className="inline-flex items-center px-3 py-2 border border-red-600 text-sm font-medium rounded-md text-red-400 bg-transparent hover:bg-red-600 hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
-            >
-              <ArrowPathIcon className="h-4 w-4 mr-2" />
-              Force Reload
-            </button>
             <div className="text-xs text-gray-500 flex items-center">
               Last updated: {lastRefresh.toLocaleTimeString()}
             </div>

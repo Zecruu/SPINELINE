@@ -17,7 +17,15 @@
     "test:admin": "node scripts/test-admin.js",
     "test:admin:prod": "node scripts/test-admin.js https://your-domain.com"
   },
-  "keywords": ["chiropractic", "clinic", "management", "healthcare", "mongodb", "react", "express"],
+  "keywords": [
+    "chiropractic",
+    "clinic",
+    "management",
+    "healthcare",
+    "mongodb",
+    "react",
+    "express"
+  ],
   "author": "SpineLine Team",
   "license": "ISC",
   "dependencies": {
@@ -31,6 +39,7 @@
     "mongoose": "^8.0.3",
     "multer": "^2.0.0",
     "nodemailer": "^7.0.3",
+    "pdfkit": "^0.17.1",
     "puppeteer": "^24.9.0",
     "react-signature-canvas": "^1.1.0-alpha.2",
     "xlsx": "^0.18.5"
