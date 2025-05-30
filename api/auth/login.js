@@ -57,6 +57,11 @@ userSchema.methods.comparePassword = async function(candidatePassword) {
   return bcrypt.compare(candidatePassword, this.password);
 };
 
+// Add static method as well for compatibility
+userSchema.statics.comparePassword = async function(candidatePassword, hashedPassword) {
+  return bcrypt.compare(candidatePassword, hashedPassword);
+};
+
 const User = mongoose.models.User || mongoose.model('User', userSchema);
 
 // Clinic Schema
@@ -135,13 +140,23 @@ module.exports = async function handler(req, res) {
     }
 
     // Check password
-    const isPasswordValid = await user.comparePassword(password);
+    console.log('Checking password...');
+    let isPasswordValid;
+    try {
+      isPasswordValid = await user.comparePassword(password);
+    } catch (error) {
+      console.log('Method comparePassword failed, using bcrypt directly:', error.message);
+      isPasswordValid = await bcrypt.compare(password, user.password);
+    }
+
     if (!isPasswordValid) {
+      console.log('Password validation failed');
       return res.status(401).json({
         success: false,
         message: 'Invalid credentials'
       });
     }
+    console.log('Password validation successful');
 
     // Update last login
     user.lastLogin = new Date();
