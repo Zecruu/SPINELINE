@@ -102,7 +102,6 @@ router.get('/clinics', verifyAdmin, async (req, res) => {
           serverSelectionTimeoutMS: 30000,
           socketTimeoutMS: 45000,
           bufferCommands: false,
-          bufferMaxEntries: 0,
           maxPoolSize: 10,
           minPoolSize: 1,
           maxIdleTimeMS: 30000,
