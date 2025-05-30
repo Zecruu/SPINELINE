@@ -40,6 +40,11 @@ const connectDB = async () => {
   }
 };
 
+// Function to check if MongoDB is connected (for compatibility)
+const checkConnection = () => {
+  return mongoose.connection.readyState === 1;
+};
+
 const app = express();
 
 // Middleware
@@ -53,17 +58,24 @@ app.use(express.urlencoded({ extended: true }));
 // Serve static files for uploads
 app.use('/uploads', express.static(path.join(__dirname, '../server/uploads')));
 
-// Database connection middleware
+// Database connection middleware (less strict for login)
 app.use(async (req, res, next) => {
   try {
     await connectDB();
     next();
   } catch (error) {
     console.error('Database connection failed:', error);
-    res.status(503).json({
-      message: 'Database connection failed',
-      error: 'Service temporarily unavailable'
-    });
+
+    // Allow login route to proceed even without DB connection (uses hardcoded admin)
+    if (req.path === '/api/secret-admin/login') {
+      console.log('Allowing login route to proceed without DB connection');
+      next();
+    } else {
+      res.status(503).json({
+        message: 'Database connection failed',
+        error: 'Service temporarily unavailable'
+      });
+    }
   }
 });
 
@@ -90,6 +102,54 @@ app.get('/api/health', (req, res) => {
     uptime: process.uptime(),
     environment: process.env.NODE_ENV || 'development'
   });
+});
+
+// Simple admin login route (no DB dependency)
+app.post('/api/secret-admin/login', (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    // Validate input
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email and password are required'
+      });
+    }
+
+    // Check against hardcoded admin credentials
+    const adminEmail = process.env.ADMIN_EMAIL || 'admin@spineline.com';
+    const adminPassword = process.env.ADMIN_PASSWORD || 'SpineLine2024!';
+
+    if (email === adminEmail && password === adminPassword) {
+      // Generate simple token (for now)
+      const token = 'admin-token-' + Date.now();
+
+      return res.json({
+        success: true,
+        message: 'Admin login successful',
+        token,
+        user: {
+          id: 'admin',
+          email: adminEmail,
+          role: 'admin',
+          name: 'SpineLine Admin'
+        }
+      });
+    }
+
+    return res.status(401).json({
+      success: false,
+      message: 'Invalid admin credentials'
+    });
+
+  } catch (error) {
+    console.error('Admin login error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error during login'
+    });
+  }
 });
 
 // API Routes
