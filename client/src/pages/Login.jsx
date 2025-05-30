@@ -30,18 +30,39 @@ const Login = () => {
       if (formData.clinicId && formData.clinicId.length >= 3) {
         setClinicLoading(true);
         try {
-          const response = await axios.get(`/api/auth/clinic/${formData.clinicId}`);
-          if (response.data.success) {
+          const response = await axios.get(`/api/auth/clinic/${formData.clinicId}`, {
+            timeout: 10000,
+            validateStatus: (status) => status < 500
+          });
+          
+          if (response.data?.success) {
             setClinicInfo(response.data.clinic);
+            setError(''); // Clear any previous errors
+          } else {
+            setClinicInfo(null);
+            setError(response.data?.message || 'Clinic not found. Please check the ID and try again.');
           }
         } catch (error) {
+          console.error('Error validating clinic:', error);
           setClinicInfo(null);
+          if (error.code === 'ECONNABORTED') {
+            setError('Request timed out. Please check your internet connection.');
+          } else if (error.response) {
+            setError(error.response.data?.message || 'Error validating clinic');
+          } else {
+            setError('Unable to connect to the server. Please try again later.');
+          }
         } finally {
           setClinicLoading(false);
         }
       } else {
         setClinicInfo(null);
-      }
+        if (formData.clinicId) {
+          setError('Clinic ID must be at least 3 characters');
+        } else {
+          setError('');
+        }
+      }  
     };
 
     const timeoutId = setTimeout(validateClinic, 500); // Debounce
@@ -50,30 +71,51 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Basic validation
+    if (!formData.clinicId || formData.clinicId.length < 3) {
+      setError('Please enter a valid clinic ID');
+      return;
+    }
+    if (!formData.email || !formData.password) {
+      setError('Please enter both email and password');
+      return;
+    }
+
     setLoading(true);
     setError('');
 
     try {
-      const response = await axios.post('/api/auth/login', formData);
+      const response = await axios.post('/api/auth/login', formData, {
+        timeout: 10000,
+        validateStatus: (status) => status < 500
+      });
       
-      if (response.data.success) {
+      if (response.data?.success) {
         // Store token and user info
         localStorage.setItem('userToken', response.data.token);
         localStorage.setItem('user', JSON.stringify(response.data.user));
         
         // Redirect based on role
-        if (response.data.user.role === 'secretary') {
-          navigate('/secretary');
-        } else if (response.data.user.role === 'doctor') {
-          navigate('/doctor');
-        }
+        const redirectPath = response.data.user.role === 'secretary' ? '/secretary' : '/doctor';
+        navigate(redirectPath);
+      } else {
+        setError(response.data?.message || 'Login failed. Please check your credentials and try again.');
       }
     } catch (error) {
       console.error('Login error:', error);
-      setError(
-        error.response?.data?.message || 
-        'Login failed. Please check your credentials.'
-      );
+      if (error.code === 'ECONNABORTED') {
+        setError('Request timed out. Please check your internet connection and try again.');
+      } else if (error.response) {
+        // Server responded with an error status code
+        setError(error.response.data?.message || 'An error occurred during login.');
+      } else if (error.request) {
+        // No response received
+        setError('Unable to connect to the server. Please check your internet connection.');
+      } else {
+        // Something else went wrong
+        setError('An unexpected error occurred. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
