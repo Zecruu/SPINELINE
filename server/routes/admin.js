@@ -1,0 +1,317 @@
+const express = require('express');
+const router = express.Router();
+const { verifyAdmin } = require('../middleware/auth');
+const { adminLogin, createClinic, createUser } = require('../controllers/adminController');
+const { User, Clinic } = require('../models');
+const { isConnected } = require('../config/db');
+
+// Admin login route (no auth required)
+router.post('/login', adminLogin);
+
+// Get all clinics (admin only)
+router.get('/clinics', verifyAdmin, async (req, res) => {
+  try {
+    let clinics;
+
+    // Check database connection
+    if (!isConnected()) {
+      console.log('📝 Using mock data - Database not connected');
+      clinics = await mockOperations.getClinics();
+
+      return res.json({
+        success: true,
+        clinics,
+        message: 'Using mock data - Database connection unavailable'
+      });
+    }
+
+    clinics = await Clinic.find({})
+      .select('clinicName clinicId contactInfo isActive createdAt')
+      .sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      clinics
+    });
+  } catch (error) {
+    console.error('Get clinics error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error fetching clinics'
+    });
+  }
+});
+
+// Create new clinic (admin only)
+router.post('/clinics', verifyAdmin, createClinic);
+
+// Get all users (admin only)
+router.get('/users', verifyAdmin, async (req, res) => {
+  try {
+    // Check database connection
+    if (!isConnected()) {
+      return res.status(503).json({
+        success: false,
+        message: 'Database connection unavailable. Please check MongoDB Atlas connection.',
+        users: []
+      });
+    }
+
+    const users = await User.find({ role: { $ne: 'admin' } })
+      .select('name email role clinicId isActive createdAt lastLogin')
+      .populate('clinic', 'clinicName')
+      .sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      users
+    });
+  } catch (error) {
+    console.error('Get users error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error fetching users'
+    });
+  }
+});
+
+// Create new user (admin only)
+router.post('/users', verifyAdmin, createUser);
+
+// Get users by clinic (admin only)
+router.get('/clinics/:clinicId/users', verifyAdmin, async (req, res) => {
+  try {
+    const { clinicId } = req.params;
+
+    // Check if clinic exists
+    const clinic = await Clinic.findOne({ clinicId: clinicId.toUpperCase() });
+    if (!clinic) {
+      return res.status(404).json({
+        success: false,
+        message: 'Clinic not found'
+      });
+    }
+
+    const users = await User.find({
+      clinicId: clinicId.toUpperCase(),
+      role: { $ne: 'admin' }
+    })
+    .select('name email role isActive createdAt lastLogin')
+    .sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      clinic: {
+        clinicName: clinic.clinicName,
+        clinicId: clinic.clinicId
+      },
+      users
+    });
+  } catch (error) {
+    console.error('Get clinic users error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error fetching clinic users'
+    });
+  }
+});
+
+// Update user status (admin only)
+router.patch('/users/:userId/status', verifyAdmin, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { isActive } = req.body;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    user.isActive = isActive;
+    await user.save();
+
+    res.json({
+      success: true,
+      message: `User ${isActive ? 'activated' : 'deactivated'} successfully`,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        isActive: user.isActive
+      }
+    });
+  } catch (error) {
+    console.error('Update user status error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error updating user status'
+    });
+  }
+});
+
+// Update clinic status (admin only)
+router.patch('/clinics/:clinicId/status', verifyAdmin, async (req, res) => {
+  try {
+    const { clinicId } = req.params;
+    const { isActive } = req.body;
+
+    const clinic = await Clinic.findOne({ clinicId: clinicId.toUpperCase() });
+    if (!clinic) {
+      return res.status(404).json({
+        success: false,
+        message: 'Clinic not found'
+      });
+    }
+
+    clinic.isActive = isActive;
+    await clinic.save();
+
+    res.json({
+      success: true,
+      message: `Clinic ${isActive ? 'activated' : 'deactivated'} successfully`,
+      clinic: {
+        clinicName: clinic.clinicName,
+        clinicId: clinic.clinicId,
+        isActive: clinic.isActive
+      }
+    });
+  } catch (error) {
+    console.error('Update clinic status error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error updating clinic status'
+    });
+  }
+});
+
+// Delete user (admin only)
+router.delete('/users/:userId', verifyAdmin, async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Prevent deletion of admin users
+    if (user.role === 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Cannot delete admin users'
+      });
+    }
+
+    await User.findByIdAndDelete(userId);
+
+    res.json({
+      success: true,
+      message: `User ${user.name} deleted successfully`
+    });
+  } catch (error) {
+    console.error('Delete user error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error deleting user'
+    });
+  }
+});
+
+// Delete clinic (admin only)
+router.delete('/clinics/:clinicId', verifyAdmin, async (req, res) => {
+  try {
+    const { clinicId } = req.params;
+
+    const clinic = await Clinic.findOne({ clinicId: clinicId.toUpperCase() });
+    if (!clinic) {
+      return res.status(404).json({
+        success: false,
+        message: 'Clinic not found'
+      });
+    }
+
+    // Check if clinic has users
+    const userCount = await User.countDocuments({
+      clinicId: clinicId.toUpperCase(),
+      role: { $ne: 'admin' }
+    });
+
+    if (userCount > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot delete clinic. It has ${userCount} user(s). Please delete or reassign users first.`
+      });
+    }
+
+    await Clinic.findOneAndDelete({ clinicId: clinicId.toUpperCase() });
+
+    res.json({
+      success: true,
+      message: `Clinic ${clinic.clinicName} deleted successfully`
+    });
+  } catch (error) {
+    console.error('Delete clinic error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error deleting clinic'
+    });
+  }
+});
+
+// Generate clinic ID suggestion
+router.get('/generate-clinic-id', verifyAdmin, async (req, res) => {
+  try {
+    const { clinicName } = req.query;
+
+    if (!clinicName) {
+      return res.status(400).json({
+        success: false,
+        message: 'Clinic name is required'
+      });
+    }
+
+    // Generate ID from clinic name
+    let baseId = clinicName
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, '')
+      .substring(0, 6);
+
+    if (baseId.length < 3) {
+      baseId = baseId.padEnd(3, '0');
+    }
+
+    let clinicId = baseId;
+    let counter = 1;
+
+    // Check if ID exists and increment if needed
+    while (await Clinic.findOne({ clinicId })) {
+      clinicId = baseId + counter.toString().padStart(2, '0');
+      counter++;
+
+      if (counter > 99) {
+        // Fallback to random if too many conflicts
+        clinicId = baseId + Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+        break;
+      }
+    }
+
+    res.json({
+      success: true,
+      suggestedId: clinicId
+    });
+  } catch (error) {
+    console.error('Generate clinic ID error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error generating clinic ID'
+    });
+  }
+});
+
+module.exports = router;

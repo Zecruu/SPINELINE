@@ -1,0 +1,71 @@
+{
+  "version": 2,
+  "name": "spineline",
+  "builds": [
+    {
+      "src": "server/server.js",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": ["server/**"]
+      }
+    },
+    {
+      "src": "client/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/secret-admin/(.*)",
+      "dest": "/server/server.js"
+    },
+    {
+      "src": "/api/(.*)",
+      "dest": "/server/server.js"
+    },
+    {
+      "src": "/secret-admin/(.*)",
+      "dest": "/client/index.html"
+    },
+    {
+      "src": "/secret-admin",
+      "dest": "/client/index.html"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/client/$1"
+    }
+  ],
+  "env": {
+    "NODE_ENV": "production",
+    "ADMIN_EMAIL": "admin@spineline.com",
+    "ADMIN_PASSWORD": "SpineLine2024!"
+  },
+  "functions": {
+    "server/server.js": {
+      "maxDuration": 30
+    }
+  },
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET, POST, PUT, DELETE, OPTIONS"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "X-Requested-With, Content-Type, Authorization"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "name": "spineline",
+  "version": "1.0.0",
+  "description": "SpineLine - Chiropractic Clinic Management Platform",
+  "main": "index.js",
+  "scripts": {
+    "dev": "concurrently \"npm run server:dev\" \"npm run client:dev\"",
+    "server:dev": "cd server && npm run dev",
+    "client:dev": "cd client && npm run dev",
+    "server:start": "cd server && npm start",
+    "client:build": "cd client && npm run build",
+    "install:all": "npm install && cd server && npm install && cd ../client && npm install",
+    "build": "npm run client:build",
+    "start": "npm run server:start",
+    "heroku-postbuild": "npm run install:all && npm run client:build",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "test:admin": "node scripts/test-admin.js",
+    "test:admin:prod": "node scripts/test-admin.js https://your-domain.com"
+  },
+  "keywords": ["chiropractic", "clinic", "management", "healthcare", "mongodb", "react", "express"],
+  "author": "SpineLine Team",
+  "license": "ISC",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
