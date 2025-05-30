@@ -53,7 +53,6 @@ const connectDB = async () => {
       maxPoolSize: 10, // Maintain up to 10 socket connections
       minPoolSize: 1, // Minimum connections
       maxIdleTimeMS: 30000, // Close connections after 30 seconds of inactivity
-      serverSelectionRetryDelayMS: 5000, // Retry every 5 seconds
       heartbeatFrequencyMS: 10000, // Send a ping every 10 seconds
       connectTimeoutMS: 30000, // Connection timeout
       family: 4 // Use IPv4, skip trying IPv6
