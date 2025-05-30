@@ -200,7 +200,7 @@ app.post('/api/secret-admin/login', (req, res) => {
 });
 
 // Mock data endpoints (when DB is not available)
-app.get('/api/secret-admin/clinics', (req, res) => {
+app.get('/api/secret-admin/clinics', (req, res, next) => {
   if (!req.dbConnected) {
     return res.json({
       success: true,
@@ -212,7 +212,7 @@ app.get('/api/secret-admin/clinics', (req, res) => {
   next();
 });
 
-app.get('/api/secret-admin/users', (req, res) => {
+app.get('/api/secret-admin/users', (req, res, next) => {
   if (!req.dbConnected) {
     return res.json({
       success: true,
@@ -224,7 +224,7 @@ app.get('/api/secret-admin/users', (req, res) => {
   next();
 });
 
-app.post('/api/secret-admin/clinics', (req, res) => {
+app.post('/api/secret-admin/clinics', (req, res, next) => {
   if (!req.dbConnected) {
     return res.status(503).json({
       success: false,
@@ -235,7 +235,7 @@ app.post('/api/secret-admin/clinics', (req, res) => {
   next();
 });
 
-app.post('/api/secret-admin/users', (req, res) => {
+app.post('/api/secret-admin/users', (req, res, next) => {
   if (!req.dbConnected) {
     return res.status(503).json({
       success: false,
