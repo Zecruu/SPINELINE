@@ -3,20 +3,16 @@
   "name": "spineline",
   "buildCommand": "cd client && npm run build",
   "outputDirectory": "client/dist",
-  "installCommand": "npm install && cd client && npm install && cd ../server && npm install",
+  "installCommand": "npm install && cd client && npm install && cd server && npm install",
   "functions": {
-    "server/server.js": {
+    "api/index.js": {
       "maxDuration": 30
     }
   },
   "rewrites": [
     {
-      "source": "/api/secret-admin/(.*)",
-      "destination": "/server/server.js"
-    },
-    {
       "source": "/api/(.*)",
-      "destination": "/server/server.js"
+      "destination": "/api"
     },
     {
       "source": "/secret-admin/(.*)",
@@ -34,7 +30,8 @@
   "env": {
     "NODE_ENV": "production",
     "ADMIN_EMAIL": "admin@spineline.com",
-    "ADMIN_PASSWORD": "SpineLine2024!"
+    "ADMIN_PASSWORD": "SpineLine2024!",
+    "MONGODB_URI": "mongodb+srv://nomnk5138:Redzone12@spinev0.zbqy7hv.mongodb.net/?retryWrites=true&w=majority&appName=spinev0"
   },
   "headers": [
     {
