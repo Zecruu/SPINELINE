@@ -260,6 +260,36 @@ app.get('/api/debug', async (req, res) => {
   try {
     const mongoose = require('mongoose');
 
+    // Test direct connection
+    const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI;
+    let connectionTest = null;
+
+    if (mongoUri) {
+      try {
+        console.log('Testing direct MongoDB connection...');
+        const testConnection = await mongoose.createConnection(mongoUri, {
+          serverSelectionTimeoutMS: 10000,
+          socketTimeoutMS: 10000,
+          connectTimeoutMS: 10000,
+          bufferCommands: false
+        });
+
+        await testConnection.db.admin().ping();
+        connectionTest = {
+          success: true,
+          message: 'Direct connection successful'
+        };
+        await testConnection.close();
+      } catch (testError) {
+        console.error('Direct connection test failed:', testError);
+        connectionTest = {
+          success: false,
+          error: testError.message,
+          code: testError.code
+        };
+      }
+    }
+
     res.json({
       success: true,
       environment: {
@@ -268,13 +298,16 @@ app.get('/api/debug', async (req, res) => {
         MONGO_URI_EXISTS: !!process.env.MONGO_URI,
         MONGODB_URI_EXISTS: !!process.env.MONGODB_URI,
         ADMIN_EMAIL_EXISTS: !!process.env.ADMIN_EMAIL,
-        ADMIN_PASSWORD_EXISTS: !!process.env.ADMIN_PASSWORD
+        ADMIN_PASSWORD_EXISTS: !!process.env.ADMIN_PASSWORD,
+        CONNECTION_STRING_FORMAT: mongoUri ? mongoUri.substring(0, 20) + '...' : 'NOT_FOUND'
       },
       database: {
         readyState: mongoose.connection.readyState,
         connected: mongoose.connection.readyState === 1,
-        name: mongoose.connection.name
+        name: mongoose.connection.name,
+        host: mongoose.connection.host
       },
+      connectionTest,
       timestamp: new Date().toISOString()
     });
   } catch (error) {

@@ -86,15 +86,39 @@ router.get('/clinics', verifyAdmin, async (req, res) => {
     console.log('Environment check - MONGO_URI exists:', !!process.env.MONGO_URI);
 
     const mongoose = require('mongoose');
-    console.log('MongoDB connection state:', mongoose.connection.readyState);
+    console.log('MongoDB connection state before:', mongoose.connection.readyState);
 
-    // Ensure connection is ready
+    // Force connection attempt if not connected
     if (mongoose.connection.readyState !== 1) {
       console.log('MongoDB not connected, attempting to connect...');
-      throw new Error('Database connection not ready');
+
+      const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI;
+      if (!mongoUri) {
+        throw new Error('MongoDB URI not found in environment variables');
+      }
+
+      try {
+        await mongoose.connect(mongoUri, {
+          serverSelectionTimeoutMS: 30000,
+          socketTimeoutMS: 45000,
+          bufferCommands: false,
+          bufferMaxEntries: 0,
+          maxPoolSize: 10,
+          minPoolSize: 1,
+          maxIdleTimeMS: 30000,
+          connectTimeoutMS: 30000,
+          family: 4
+        });
+        console.log('MongoDB connected successfully in route');
+      } catch (connectError) {
+        console.error('Failed to connect to MongoDB in route:', connectError);
+        throw new Error('Failed to establish database connection');
+      }
     }
 
+    console.log('MongoDB connection state after:', mongoose.connection.readyState);
     console.log('Executing clinics query...');
+
     const clinics = await Clinic.find({})
       .select('clinicName clinicId contactInfo isActive createdAt')
       .sort({ createdAt: -1 })
