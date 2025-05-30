@@ -58,18 +58,19 @@ jobs:
   #       service-id: ${{ secrets.RENDER_SERVICE_ID }}
   #       api-key: ${{ secrets.RENDER_API_KEY }}
 
-  deploy-vercel:
-    runs-on: ubuntu-latest
-    needs: test
-    if: github.ref == 'refs/heads/main'
-
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Deploy to Vercel
-      uses: amondnet/vercel-action@v25
-      with:
-        vercel-token: ${{ secrets.VERCEL_TOKEN }}
-        vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-        vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-        vercel-args: '--prod'
+  # Vercel deployment handled automatically by Vercel GitHub integration
+  # deploy-vercel:
+  #   runs-on: ubuntu-latest
+  #   needs: test
+  #   if: github.ref == 'refs/heads/main'
+  #
+  #   steps:
+  #   - uses: actions/checkout@v4
+  #
+  #   - name: Deploy to Vercel
+  #     uses: amondnet/vercel-action@v25
+  #     with:
+  #       vercel-token: ${{ secrets.VERCEL_TOKEN }}
+  #       vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+  #       vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+  #       vercel-args: '--prod'
