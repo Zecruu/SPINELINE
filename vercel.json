@@ -1,53 +1,40 @@
 {
   "version": 2,
   "name": "spineline",
-  "builds": [
-    {
-      "src": "server/server.js",
-      "use": "@vercel/node",
-      "config": {
-        "includeFiles": ["server/**"]
-      }
-    },
-    {
-      "src": "client/package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "dist"
-      }
+  "buildCommand": "cd client && npm run build",
+  "outputDirectory": "client/dist",
+  "installCommand": "npm install && cd client && npm install && cd ../server && npm install",
+  "functions": {
+    "server/server.js": {
+      "maxDuration": 30
     }
-  ],
-  "routes": [
+  },
+  "rewrites": [
     {
-      "src": "/api/secret-admin/(.*)",
-      "dest": "/server/server.js"
+      "source": "/api/secret-admin/(.*)",
+      "destination": "/server/server.js"
     },
     {
-      "src": "/api/(.*)",
-      "dest": "/server/server.js"
+      "source": "/api/(.*)",
+      "destination": "/server/server.js"
     },
     {
-      "src": "/secret-admin/(.*)",
-      "dest": "/client/index.html"
+      "source": "/secret-admin/(.*)",
+      "destination": "/index.html"
     },
     {
-      "src": "/secret-admin",
-      "dest": "/client/index.html"
+      "source": "/secret-admin",
+      "destination": "/index.html"
     },
     {
-      "src": "/(.*)",
-      "dest": "/client/$1"
+      "source": "/(.*)",
+      "destination": "/$1"
     }
   ],
   "env": {
     "NODE_ENV": "production",
     "ADMIN_EMAIL": "admin@spineline.com",
     "ADMIN_PASSWORD": "SpineLine2024!"
-  },
-  "functions": {
-    "server/server.js": {
-      "maxDuration": 30
-    }
   },
   "headers": [
     {
