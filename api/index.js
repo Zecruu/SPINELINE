@@ -241,6 +241,39 @@ app.get('/api/test-db', async (req, res) => {
   }
 });
 
+// Debug endpoint to check environment and auth
+app.get('/api/debug', async (req, res) => {
+  try {
+    const mongoose = require('mongoose');
+
+    res.json({
+      success: true,
+      environment: {
+        NODE_ENV: process.env.NODE_ENV,
+        JWT_SECRET_EXISTS: !!process.env.JWT_SECRET,
+        MONGO_URI_EXISTS: !!process.env.MONGO_URI,
+        MONGODB_URI_EXISTS: !!process.env.MONGODB_URI,
+        ADMIN_EMAIL_EXISTS: !!process.env.ADMIN_EMAIL,
+        ADMIN_PASSWORD_EXISTS: !!process.env.ADMIN_PASSWORD
+      },
+      database: {
+        readyState: mongoose.connection.readyState,
+        connected: mongoose.connection.readyState === 1,
+        name: mongoose.connection.name
+      },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Debug endpoint error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Debug endpoint failed',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 // API Routes (Vercel rewrites /api/* to this function)
 app.use('/api/secret-admin', require('../server/routes/admin'));
 app.use('/api/auth', require('../server/routes/auth'));
