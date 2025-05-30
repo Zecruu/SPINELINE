@@ -240,3 +240,6 @@ This is a private project for SpineLine development. Please follow the establish
 ## 📄 License
 
 ISC License - SpineLine Team
+
+---
+*Last deployment trigger: December 2024*
