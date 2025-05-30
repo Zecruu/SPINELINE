@@ -7,16 +7,17 @@ const mongoose = require('mongoose');
 // Load environment variables
 dotenv.config();
 
-// MongoDB connection for serverless
+// MongoDB connection for serverless (Vercel/Render)
+// Use a singleton pattern to avoid reconnecting on every request in serverless environments
 let isConnected = false;
 
 const connectDB = async () => {
+  // If already connected, reuse the connection
   if (isConnected && mongoose.connection.readyState === 1) {
     return;
   }
-
   try {
-    // Disable Mongoose buffering globally
+    // Disable Mongoose buffering globally for serverless
     mongoose.set('strictQuery', false);
     mongoose.set('bufferCommands', false);
     mongoose.set('bufferMaxEntries', 0);
@@ -31,6 +32,15 @@ const connectDB = async () => {
 
     if (!mongoUri) {
       throw new Error('MongoDB URI not found in environment variables');
+    }
+
+    // Warn if the connection string contains unencoded special characters
+    const credMatch = mongoUri.match(/mongodb\+srv:\/\/(.*?):(.*?)@/);
+    if (credMatch) {
+      const [_, user, pass] = credMatch;
+      if (/[^A-Za-z0-9%]/.test(user) || /[^A-Za-z0-9%]/.test(pass)) {
+        console.warn('⚠️ MongoDB username/password may contain unencoded special characters. This can break connections in Vercel. Please URI-encode them if needed.');
+      }
     }
 
     // Log connection attempt (without showing full URI for security)
@@ -174,6 +184,7 @@ app.get('/api/env-check', (req, res) => {
 
 // MongoDB connection test endpoint
 app.get('/api/test-db', async (req, res) => {
+  // This endpoint checks DB connection and returns connection status
   try {
     await connectDB();
     res.json({
@@ -186,12 +197,46 @@ app.get('/api/test-db', async (req, res) => {
       }
     });
   } catch (error) {
+    console.error('❌ /api/test-db connection error:', error);
     res.status(503).json({
       success: false,
       message: 'Database connection failed',
       error: error.message
     });
   }
+});
+
+// --- DEBUG ENDPOINT FOR VERCEL ---
+// This endpoint helps debug env var and DB connection issues in Vercel serverless
+app.get('/api/debug-mongo', async (req, res) => {
+  const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI;
+  let connectionResult = null;
+  try {
+    await connectDB();
+    connectionResult = {
+      readyState: mongoose.connection.readyState,
+      host: mongoose.connection.host,
+      name: mongoose.connection.name,
+      connected: mongoose.connection.readyState === 1
+    };
+  } catch (error) {
+    connectionResult = {
+      error: error.message,
+      stack: error.stack,
+      readyState: mongoose.connection.readyState
+    };
+  }
+  res.json({
+    env: {
+      NODE_ENV: process.env.NODE_ENV,
+      MONGODB_URI_SET: !!process.env.MONGODB_URI,
+      MONGO_URI_SET: !!process.env.MONGO_URI,
+      JWT_SECRET_SET: !!process.env.JWT_SECRET
+    },
+    mongoUriPreview: mongoUri ? mongoUri.substring(0, 40) + '...' : null,
+    connectionResult,
+    timestamp: new Date().toISOString()
+  });
 });
 
 // Simple admin login route (no DB dependency)
