@@ -9,13 +9,13 @@ const connectDB = async () => {
   if (isConnected && mongoose.connection.readyState === 1) {
     return;
   }
-  
+
   try {
     mongoose.set('strictQuery', false);
     mongoose.set('bufferCommands', false);
 
     const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI;
-    
+
     if (!mongoUri) {
       throw new Error('MongoDB URI not found in environment variables');
     }
@@ -109,12 +109,12 @@ module.exports = async function handler(req, res) {
   try {
     // Verify token and get user info
     const user = verifyToken(req);
-    
+
     // Connect to database
     await connectDB();
 
     // Get query parameters
-    const { 
+    const {
       search = '',
       status = 'all',
       page = 1,
@@ -171,7 +171,7 @@ module.exports = async function handler(req, res) {
         }, 0);
 
         const totalVisits = appointments.length;
-        const lastVisit = appointments.length > 0 ? 
+        const lastVisit = appointments.length > 0 ?
           appointments.sort((a, b) => new Date(b.appointmentDate) - new Date(a.appointmentDate))[0].appointmentDate : null;
 
         // Calculate outstanding balance (simplified - in real system would include payments)
@@ -186,10 +186,10 @@ module.exports = async function handler(req, res) {
           phone: patient.phone,
           dateOfBirth: patient.dateOfBirth,
           isActive: patient.isActive,
-          
+
           // Insurance info
           insurance: patient.insurance || {},
-          
+
           // Billing summary
           billing: {
             totalCharges,
@@ -198,10 +198,10 @@ module.exports = async function handler(req, res) {
             lastVisit,
             averageVisitCharge: totalVisits > 0 ? Math.round(totalCharges / totalVisits * 100) / 100 : 0
           },
-          
+
           // Account status
           accountStatus: outstandingBalance > 0 ? 'Outstanding' : 'Current',
-          
+
           createdAt: patient.createdAt,
           updatedAt: patient.updatedAt
         };
@@ -214,13 +214,14 @@ module.exports = async function handler(req, res) {
       activePatients: patientsWithBilling.filter(p => p.isActive).length,
       totalOutstanding: patientsWithBilling.reduce((sum, p) => sum + p.billing.outstandingBalance, 0),
       totalCharges: patientsWithBilling.reduce((sum, p) => sum + p.billing.totalCharges, 0),
-      averageBalance: patientsWithBilling.length > 0 ? 
+      averageBalance: patientsWithBilling.length > 0 ?
         Math.round(patientsWithBilling.reduce((sum, p) => sum + p.billing.outstandingBalance, 0) / patientsWithBilling.length * 100) / 100 : 0,
       patientsWithBalance: patientsWithBilling.filter(p => p.billing.outstandingBalance > 0).length
     };
 
     res.json({
       success: true,
+      data: patientsWithBilling, // Frontend expects 'data' field
       patients: patientsWithBilling,
       summary,
       pagination: {
@@ -237,7 +238,7 @@ module.exports = async function handler(req, res) {
 
   } catch (error) {
     console.error('Ledger patients error:', error);
-    
+
     if (error.message === 'No token provided' || error.name === 'JsonWebTokenError') {
       return res.status(401).json({
         success: false,

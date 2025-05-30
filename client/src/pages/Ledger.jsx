@@ -73,10 +73,16 @@ const Ledger = () => {
       });
 
       if (response.data.success) {
-        setPatients(response.data.data);
+        // Ensure data is always an array
+        const patientsData = response.data.data || response.data.patients || [];
+        setPatients(patientsData);
+      } else {
+        console.error('API returned success: false');
+        setPatients([]); // Set empty array on failure
       }
     } catch (error) {
       console.error('Error loading patients:', error);
+      setPatients([]); // Set empty array on error
     } finally {
       setLoading(false);
     }
@@ -94,10 +100,16 @@ const Ledger = () => {
       });
 
       if (response.data.success) {
-        setPatientLedger(response.data.data);
+        // Ensure data is always an array
+        const ledgerData = response.data.data || [];
+        setPatientLedger(ledgerData);
+      } else {
+        console.error('API returned success: false');
+        setPatientLedger([]); // Set empty array on failure
       }
     } catch (error) {
       console.error('Error loading patient ledger:', error);
+      setPatientLedger([]); // Set empty array on error
     }
   };
 
@@ -243,14 +255,14 @@ const Ledger = () => {
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
                     </td>
                   </tr>
-                ) : patients.length === 0 ? (
+                ) : !patients || patients.length === 0 ? (
                   <tr>
                     <td colSpan="5" className="px-6 py-4 text-center text-gray-500">
                       {searchTerm ? 'No patients found matching your search' : 'No patients found'}
                     </td>
                   </tr>
                 ) : (
-                  patients.map((patient) => (
+                  (patients || []).map((patient) => (
                     <tr key={patient._id} className="hover:bg-gray-700">
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-white font-medium">
                         {patient.fullName}
@@ -357,14 +369,14 @@ const Ledger = () => {
                         </tr>
                       </thead>
                       <tbody className="bg-gray-800 divide-y divide-gray-700">
-                        {patientLedger.length === 0 ? (
+                        {!patientLedger || patientLedger.length === 0 ? (
                           <tr>
                             <td colSpan="7" className="px-4 py-4 text-center text-gray-500">
                               No transactions found
                             </td>
                           </tr>
                         ) : (
-                          patientLedger.map((transaction, index) => (
+                          (patientLedger || []).map((transaction, index) => (
                             <tr key={index} className={`${transaction.balance > 0 ? 'bg-red-900/20' : ''}`}>
                               <td className="px-4 py-3 whitespace-nowrap text-sm text-white">
                                 {new Date(transaction.date).toLocaleDateString()}
@@ -402,19 +414,19 @@ const Ledger = () => {
                 <div className="bg-gray-700 px-6 py-4">
                   <div className="flex justify-between items-center">
                     <div className="text-sm text-gray-300">
-                      Total Transactions: {patientLedger.length}
+                      Total Transactions: {(patientLedger || []).length}
                     </div>
                     <div className="flex space-x-6">
                       <div className="text-sm">
                         <span className="text-gray-400">Total Charges: </span>
                         <span className="text-white font-medium">
-                          ${patientLedger.reduce((sum, t) => sum + (t.charge || 0), 0).toFixed(2)}
+                          ${(patientLedger || []).reduce((sum, t) => sum + (t.charge || 0), 0).toFixed(2)}
                         </span>
                       </div>
                       <div className="text-sm">
                         <span className="text-gray-400">Total Paid: </span>
                         <span className="text-green-400 font-medium">
-                          ${patientLedger.reduce((sum, t) => sum + (t.paid || 0), 0).toFixed(2)}
+                          ${(patientLedger || []).reduce((sum, t) => sum + (t.paid || 0), 0).toFixed(2)}
                         </span>
                       </div>
                       <div className="text-sm">
