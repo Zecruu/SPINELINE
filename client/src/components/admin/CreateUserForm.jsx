@@ -24,7 +24,7 @@ const CreateUserForm = ({ onSuccess }) => {
   const loadClinics = async () => {
     try {
       const token = localStorage.getItem('adminToken');
-      const response = await axios.get('/api/admin/clinics', {
+      const response = await axios.get('/api/secret-admin/clinics', {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -66,7 +66,7 @@ const CreateUserForm = ({ onSuccess }) => {
     try {
       const token = localStorage.getItem('adminToken');
       const response = await axios.post(
-        '/api/admin/users',
+        '/api/secret-admin/users',
         formData,
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -77,7 +77,7 @@ const CreateUserForm = ({ onSuccess }) => {
           `User "${user.name}" created successfully!\n` +
           `Email: ${user.email}\n` +
           `Role: ${user.role}\n` +
-          `Clinic: ${clinic.clinicName} (${clinic.clinicId})\n` +
+          `Clinic: ${clinic ? clinic.clinicName : 'Unknown'} (${clinic ? clinic.clinicId : 'Unknown'})\n` +
           `Password: ${formData.password} (Please share securely with the user)`
         );
 

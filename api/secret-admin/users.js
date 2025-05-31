@@ -8,13 +8,13 @@ const connectDB = async () => {
   if (isConnected && mongoose.connection.readyState === 1) {
     return;
   }
-  
+
   try {
     mongoose.set('strictQuery', false);
     mongoose.set('bufferCommands', false);
 
     const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI;
-    
+
     if (!mongoUri) {
       throw new Error('MongoDB URI not found in environment variables');
     }
@@ -52,6 +52,15 @@ const userSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 const User = mongoose.models.User || mongoose.model('User', userSchema);
+
+// Clinic Schema
+const clinicSchema = new mongoose.Schema({
+  clinicName: { type: String, required: true },
+  clinicId: { type: String, required: true, unique: true },
+  isActive: { type: Boolean, default: true }
+}, { timestamps: true });
+
+const Clinic = mongoose.models.Clinic || mongoose.model('Clinic', clinicSchema);
 
 export default async function handler(req, res) {
   // Add CORS headers
@@ -101,6 +110,15 @@ export default async function handler(req, res) {
         });
       }
 
+      // Get clinic information
+      const clinic = await Clinic.findOne({ clinicId: clinicId.toUpperCase() });
+      if (!clinic) {
+        return res.status(400).json({
+          success: false,
+          message: 'Clinic not found'
+        });
+      }
+
       // Hash password
       const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -116,14 +134,18 @@ export default async function handler(req, res) {
 
       await newUser.save();
 
-      // Return user without password
+      // Return user without password and include clinic info
       const userResponse = newUser.toObject();
       delete userResponse.password;
 
       return res.json({
         success: true,
         message: 'User created successfully',
-        user: userResponse
+        user: userResponse,
+        clinic: {
+          clinicName: clinic.clinicName,
+          clinicId: clinic.clinicId
+        }
       });
     }
 

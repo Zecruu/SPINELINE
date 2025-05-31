@@ -18,7 +18,7 @@ const UsersTable = ({ onUpdate }) => {
   const loadUsers = async () => {
     try {
       const token = localStorage.getItem('adminToken');
-      const response = await axios.get('/api/admin/users', {
+      const response = await axios.get('/api/secret-admin/users', {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -36,7 +36,7 @@ const UsersTable = ({ onUpdate }) => {
   const loadClinics = async () => {
     try {
       const token = localStorage.getItem('adminToken');
-      const response = await axios.get('/api/admin/clinics', {
+      const response = await axios.get('/api/secret-admin/clinics', {
         headers: { Authorization: `Bearer ${token}` }
       });
 
