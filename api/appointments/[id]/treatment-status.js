@@ -1,4 +1,4 @@
-// Appointment status update endpoint
+// Appointment treatment status endpoint
 const mongoose = require('mongoose');
 const jwt = require('jsonwebtoken');
 
@@ -9,13 +9,13 @@ const connectDB = async () => {
   if (isConnected && mongoose.connection.readyState === 1) {
     return;
   }
-
+  
   try {
     mongoose.set('strictQuery', false);
     mongoose.set('bufferCommands', false);
 
     const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI;
-
+    
     if (!mongoUri) {
       throw new Error('MongoDB URI not found in environment variables');
     }
@@ -71,7 +71,7 @@ const appointmentSchema = new mongoose.Schema({
     required: [true, 'Visit type is required'],
     enum: [
       'New Patient',
-      'Re-evaluation',
+      'Re-evaluation', 
       'Regular Visit',
       'Initial Consultation',
       'Follow-Up',
@@ -107,19 +107,6 @@ const appointmentSchema = new mongoose.Schema({
     enum: ['In Progress', 'Ready for Checkout'],
     default: 'In Progress'
   },
-  cancellationReason: {
-    type: String
-  },
-  rescheduleReason: {
-    type: String
-  },
-  actionTaken: {
-    type: String
-  },
-  notifyPatient: {
-    type: Boolean,
-    default: false
-  },
   assignedDoctor: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
@@ -130,14 +117,6 @@ const appointmentSchema = new mongoose.Schema({
   },
   updatedBy: {
     type: String
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
-  },
-  updatedAt: {
-    type: Date,
-    default: Date.now
   }
 }, { timestamps: true });
 
@@ -168,25 +147,25 @@ module.exports = async function handler(req, res) {
   try {
     // Verify token and get user info
     const user = verifyToken(req);
-
+    
     // Connect to database
     await connectDB();
 
     if (req.method === 'PATCH') {
-      // Update appointment status
+      // Update appointment treatment status
       const { id } = req.query;
-      const { status, cancellationReason, rescheduleReason, actionTaken, notifyPatient } = req.body;
+      const { treatmentStatus } = req.body;
       const clinicId = user.clinicId;
       const updatedBy = user.name || user.email;
 
-      console.log(`🔄 Updating appointment ${id} status to: ${status}`);
+      console.log(`🔄 Updating appointment ${id} treatment status to: ${treatmentStatus}`);
 
-      const validStatuses = ['Scheduled', 'Checked-In', 'In Progress', 'Completed', 'No-Show', 'Cancelled', 'Checked-Out', 'In Treatment'];
+      const validStatuses = ['In Progress', 'Ready for Checkout'];
 
-      if (!validStatuses.includes(status)) {
+      if (!validStatuses.includes(treatmentStatus)) {
         return res.status(400).json({
           success: false,
-          message: 'Invalid status'
+          message: 'Invalid treatment status'
         });
       }
 
@@ -199,31 +178,22 @@ module.exports = async function handler(req, res) {
         });
       }
 
-      // Prepare update data
-      const updateData = {
-        status,
-        updatedBy,
-        updatedAt: new Date()
-      };
-
-      // Add optional fields if provided
-      if (cancellationReason) updateData.cancellationReason = cancellationReason;
-      if (rescheduleReason) updateData.rescheduleReason = rescheduleReason;
-      if (actionTaken) updateData.actionTaken = actionTaken;
-      if (notifyPatient !== undefined) updateData.notifyPatient = notifyPatient;
-
       // Update appointment
       const updatedAppointment = await Appointment.findOneAndUpdate(
         { _id: id, clinicId },
-        updateData,
+        { 
+          treatmentStatus,
+          updatedBy,
+          updatedAt: new Date()
+        },
         { new: true, runValidators: true }
       );
 
-      console.log(`✅ Appointment ${id} status updated to: ${status}`);
+      console.log(`✅ Appointment ${id} treatment status updated to: ${treatmentStatus}`);
 
       res.json({
         success: true,
-        message: 'Appointment status updated successfully',
+        message: 'Appointment treatment status updated successfully',
         appointment: updatedAppointment
       });
 
@@ -235,8 +205,8 @@ module.exports = async function handler(req, res) {
     }
 
   } catch (error) {
-    console.error('Appointment status update error:', error);
-
+    console.error('Appointment treatment status update error:', error);
+    
     if (error.message === 'No token provided' || error.name === 'JsonWebTokenError') {
       return res.status(401).json({
         success: false,

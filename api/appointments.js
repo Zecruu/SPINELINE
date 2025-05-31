@@ -100,6 +100,16 @@ const appointmentSchema = new mongoose.Schema({
     enum: ['Scheduled', 'Checked-In', 'In Treatment', 'Checked-Out', 'In Progress', 'Completed', 'No-Show', 'Cancelled'],
     default: 'Scheduled'
   },
+  confirmationStatus: {
+    type: String,
+    enum: ['Confirmed', 'Unconfirmed'],
+    default: 'Unconfirmed'
+  },
+  treatmentStatus: {
+    type: String,
+    enum: ['In Progress', 'Ready for Checkout'],
+    default: 'In Progress'
+  },
   assignedDoctor: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
