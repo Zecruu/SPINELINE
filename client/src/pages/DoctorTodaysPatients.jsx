@@ -157,14 +157,15 @@ const DoctorTodaysPatients = () => {
   };
 
   // Confirm cancellation
-  const confirmCancellation = async (reason) => {
+  const confirmCancellation = async (reason, notifyPatient = false) => {
     try {
       const token = localStorage.getItem('userToken');
       const response = await axios.patch(`/api/appointments/${selectedAppointment._id}/status`,
         {
           status: 'Cancelled',
           cancellationReason: reason,
-          actionTaken: 'Appointment Cancelled'
+          actionTaken: 'Appointment Cancelled',
+          notifyPatient
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );

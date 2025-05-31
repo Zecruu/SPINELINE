@@ -9,13 +9,13 @@ const connectDB = async () => {
   if (isConnected && mongoose.connection.readyState === 1) {
     return;
   }
-  
+
   try {
     mongoose.set('strictQuery', false);
     mongoose.set('bufferCommands', false);
 
     const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI;
-    
+
     if (!mongoUri) {
       throw new Error('MongoDB URI not found in environment variables');
     }
@@ -45,6 +45,7 @@ const connectDB = async () => {
 const patientSchema = new mongoose.Schema({
   firstName: { type: String, required: true },
   lastName: { type: String, required: true },
+  recordNumber: { type: String, unique: true },
   email: { type: String },
   phone: { type: String },
   dateOfBirth: { type: Date },
@@ -105,14 +106,14 @@ module.exports = async function handler(req, res) {
   try {
     // Verify token and get user info
     const user = verifyToken(req);
-    
+
     // Connect to database
     await connectDB();
 
     if (req.method === 'GET') {
       // Get query parameters
-      const { 
-        search = '', 
+      const {
+        search = '',
         status = 'all',
         page = 1,
         limit = 50
@@ -136,6 +137,7 @@ module.exports = async function handler(req, res) {
         query.$or = [
           { firstName: searchRegex },
           { lastName: searchRegex },
+          { recordNumber: searchRegex },
           { email: searchRegex },
           { phone: searchRegex }
         ];
@@ -154,10 +156,12 @@ module.exports = async function handler(req, res) {
 
       // Format patients for frontend
       const formattedPatients = patients.map(patient => ({
+        _id: patient._id,
         id: patient._id,
         firstName: patient.firstName,
         lastName: patient.lastName,
         fullName: `${patient.firstName} ${patient.lastName}`,
+        recordNumber: patient.recordNumber || `P${patient._id.toString().slice(-6).toUpperCase()}`,
         email: patient.email,
         phone: patient.phone,
         dateOfBirth: patient.dateOfBirth,
@@ -190,7 +194,7 @@ module.exports = async function handler(req, res) {
     } else if (req.method === 'POST') {
       // Create new patient
       const patientData = req.body;
-      
+
       // Add clinic ID
       patientData.clinicId = user.clinicId;
 
@@ -225,10 +229,12 @@ module.exports = async function handler(req, res) {
         success: true,
         message: 'Patient created successfully',
         patient: {
+          _id: patient._id,
           id: patient._id,
           firstName: patient.firstName,
           lastName: patient.lastName,
           fullName: `${patient.firstName} ${patient.lastName}`,
+          recordNumber: patient.recordNumber || `P${patient._id.toString().slice(-6).toUpperCase()}`,
           email: patient.email,
           phone: patient.phone,
           dateOfBirth: patient.dateOfBirth,
@@ -250,9 +256,9 @@ module.exports = async function handler(req, res) {
 
       // Find and update patient
       const patient = await Patient.findOneAndUpdate(
-        { 
-          _id: patientId, 
-          clinicId: user.clinicId 
+        {
+          _id: patientId,
+          clinicId: user.clinicId
         },
         updateData,
         { new: true }
@@ -293,9 +299,9 @@ module.exports = async function handler(req, res) {
 
       // Soft delete by setting isActive to false
       const patient = await Patient.findOneAndUpdate(
-        { 
-          _id: patientId, 
-          clinicId: user.clinicId 
+        {
+          _id: patientId,
+          clinicId: user.clinicId
         },
         { isActive: false },
         { new: true }
@@ -322,7 +328,7 @@ module.exports = async function handler(req, res) {
 
   } catch (error) {
     console.error('Patients error:', error);
-    
+
     if (error.message === 'No token provided' || error.name === 'JsonWebTokenError') {
       return res.status(401).json({
         success: false,
