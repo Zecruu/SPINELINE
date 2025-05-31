@@ -63,7 +63,7 @@ const BillingCodesSettings = ({ user }) => {
     try {
       setLoading(true);
       const token = localStorage.getItem('userToken');
-      
+
       const response = await fetch('/api/service-codes', {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -90,11 +90,11 @@ const BillingCodesSettings = ({ user }) => {
   }, []);
 
   // Filter service codes based on search and category
-  const filteredServiceCodes = serviceCodes.filter(code => {
-    const matchesSearch = code.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         code.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = filterCategory === 'All' || code.category === filterCategory;
-    return matchesSearch && matchesCategory && !code.isPackage; // Exclude packages from billing codes
+  const filteredServiceCodes = (serviceCodes || []).filter(code => {
+    const matchesSearch = (code?.code || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (code?.description || '').toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = filterCategory === 'All' || code?.category === filterCategory;
+    return matchesSearch && matchesCategory && !code?.isPackage; // Exclude packages from billing codes
   });
 
   // Handle form submission for add/edit
@@ -166,7 +166,7 @@ const BillingCodesSettings = ({ user }) => {
 
     try {
       const token = localStorage.getItem('userToken');
-      
+
       const response = await fetch(`/api/service-codes/${codeId}`, {
         method: 'DELETE',
         headers: {
@@ -316,8 +316,8 @@ const BillingCodesSettings = ({ user }) => {
                   <td colSpan="6" className="px-6 py-8 text-center">
                     <DocumentTextIcon className="h-12 w-12 text-gray-400 mx-auto mb-3" />
                     <p className="text-gray-400">
-                      {searchTerm || filterCategory !== 'All' 
-                        ? 'No service codes match your search criteria' 
+                      {searchTerm || filterCategory !== 'All'
+                        ? 'No service codes match your search criteria'
                         : 'No service codes found'}
                     </p>
                   </td>
@@ -349,7 +349,7 @@ const BillingCodesSettings = ({ user }) => {
                     </td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        code.isActive 
+                        code.isActive
                           ? 'bg-green-900/30 text-green-300'
                           : 'bg-red-900/30 text-red-300'
                       }`}>
@@ -390,7 +390,7 @@ const BillingCodesSettings = ({ user }) => {
               <h3 className="text-lg font-semibold text-white mb-4">
                 {selectedCode ? 'Edit Service Code' : 'Add New Service Code'}
               </h3>
-              
+
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>

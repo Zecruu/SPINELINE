@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { XMarkIcon, MagnifyingGlassIcon, CheckCircleIcon, PlusIcon } from '@heroicons/react/24/outline';
 
-const DiagnosticCodeModal = ({ 
-  isOpen, 
-  onClose, 
-  availableCodes, 
-  selectedCodes, 
-  onApply 
+const DiagnosticCodeModal = ({
+  isOpen,
+  onClose,
+  availableCodes,
+  selectedCodes,
+  onApply
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [tempSelectedCodes, setTempSelectedCodes] = useState([]);
@@ -21,17 +21,17 @@ const DiagnosticCodeModal = ({
   }, [isOpen, selectedCodes]);
 
   // Filter and sort codes
-  const filteredCodes = availableCodes
-    .filter(code => 
-      code.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      code.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (code.category && code.category.toLowerCase().includes(searchTerm.toLowerCase()))
+  const filteredCodes = (availableCodes || [])
+    .filter(code =>
+      (code?.code || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (code?.description || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (code?.category && code.category.toLowerCase().includes(searchTerm.toLowerCase()))
     )
     .sort((a, b) => {
       if (sortBy === 'code') {
-        return a.code.localeCompare(b.code);
+        return (a?.code || '').localeCompare(b?.code || '');
       } else {
-        return a.description.localeCompare(b.description);
+        return (a?.description || '').localeCompare(b?.description || '');
       }
     });
 
@@ -57,7 +57,7 @@ const DiagnosticCodeModal = ({
 
   // Remove code from selection
   const removeCode = (codeToRemove) => {
-    setTempSelectedCodes(prev => 
+    setTempSelectedCodes(prev =>
       prev.filter(code => code.code !== codeToRemove)
     );
   };
@@ -107,7 +107,7 @@ const DiagnosticCodeModal = ({
           <div className="w-1/2 border-r border-gray-600 flex flex-col">
             <div className="p-4 border-b border-gray-600">
               <h3 className="text-lg font-medium text-white mb-4">Find Diagnostic Codes</h3>
-              
+
               {/* Search */}
               <div className="relative mb-4">
                 <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />

@@ -78,8 +78,8 @@ const PatientVisits = () => {
     // Search filter
     if (searchTerm) {
       filtered = filtered.filter(visit =>
-        visit.patient?.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        visit.patient?.recordNumber?.toLowerCase().includes(searchTerm.toLowerCase())
+        (visit?.patient?.fullName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (visit?.patient?.recordNumber || '').toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 

@@ -132,10 +132,10 @@ const AppointmentDetailsForm = ({
     if (searchTerm.trim() === '') {
       setFilteredPatients([]);
     } else {
-      const filtered = patients.filter(patient =>
-        `${patient.firstName} ${patient.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        patient.recordNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (patient.phone && patient.phone.includes(searchTerm))
+      const filtered = (patients || []).filter(patient =>
+        `${patient?.firstName || ''} ${patient?.lastName || ''}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (patient?.recordNumber || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (patient?.phone && patient.phone.includes(searchTerm))
       );
       setFilteredPatients(filtered);
     }

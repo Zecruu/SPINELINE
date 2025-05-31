@@ -21,17 +21,17 @@ const ProcedureCodeModal = ({
   }, [isOpen, selectedCodes]);
 
   // Filter and sort codes
-  const filteredCodes = availableCodes
+  const filteredCodes = (availableCodes || [])
     .filter(code =>
-      code.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      code.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (code.category && code.category.toLowerCase().includes(searchTerm.toLowerCase()))
+      (code?.code || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (code?.description || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (code?.category && code.category.toLowerCase().includes(searchTerm.toLowerCase()))
     )
     .sort((a, b) => {
       if (sortBy === 'code') {
-        return a.code.localeCompare(b.code);
+        return (a?.code || '').localeCompare(b?.code || '');
       } else {
-        return a.description.localeCompare(b.description);
+        return (a?.description || '').localeCompare(b?.description || '');
       }
     });
 

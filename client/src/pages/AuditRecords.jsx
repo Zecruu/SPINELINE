@@ -139,9 +139,9 @@ const AuditRecords = () => {
     if (filters.searchTerm) {
       const searchLower = filters.searchTerm.toLowerCase();
       filtered = filtered.filter(record =>
-        record.patientName?.toLowerCase().includes(searchLower) ||
-        record.recordNumber?.toLowerCase().includes(searchLower) ||
-        record.notes?.toLowerCase().includes(searchLower)
+        (record?.patientName || '').toLowerCase().includes(searchLower) ||
+        (record?.recordNumber || '').toLowerCase().includes(searchLower) ||
+        (record?.notes || '').toLowerCase().includes(searchLower)
       );
     }
 
