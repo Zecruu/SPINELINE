@@ -413,7 +413,7 @@ const TodaysPatients = () => {
           <div className="flex-1 bg-gray-800 rounded-lg flex flex-col min-h-0">
             <div className="p-4 border-b border-gray-700 flex-shrink-0">
               <div className="flex items-center justify-between">
-                <h3 className="text-white font-medium">Scheduled ({appointments.filter(apt => apt.status === 'Scheduled').length})</h3>
+                <h3 className="text-white font-medium">Scheduled ({appointments.filter(apt => apt?.status === 'Scheduled').length})</h3>
               </div>
               <div className="mt-2">
                 <div className="grid grid-cols-5 gap-2 text-sm text-gray-400">
@@ -424,20 +424,20 @@ const TodaysPatients = () => {
               </div>
             </div>
             <div className="flex-1 overflow-y-auto p-4">
-              {appointments.filter(apt => apt.status === 'Scheduled').length === 0 ? (
+              {appointments.filter(apt => apt?.status === 'Scheduled').length === 0 ? (
                 <div className="text-center text-gray-400 text-sm py-8">
                   No appointments
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {appointments.filter(apt => apt.status === 'Scheduled').map((appointment) => (
+                  {appointments.filter(apt => apt?.status === 'Scheduled').map((appointment) => (
                     <div key={appointment._id} className="grid grid-cols-5 gap-2 items-center p-3 bg-gray-700 rounded hover:bg-gray-600">
                       <div className="text-sm text-white font-medium">
                         {formatTime(appointment.appointmentTime)}
                       </div>
                       <div className="col-span-2 text-sm cursor-pointer" onClick={() => handleViewPatient(appointment._id)}>
-                        <div className="text-white font-medium">{appointment.patient.fullName}</div>
-                        <div className="text-gray-400 text-xs">{appointment.visitType}</div>
+                        <div className="text-white font-medium">{appointment.patient?.fullName || 'Unknown Patient'}</div>
+                        <div className="text-gray-400 text-xs">{appointment.visitType || 'Regular Visit'}</div>
                         <div className="flex items-center gap-2 mt-1">
                           <button
                             onClick={(e) => {
@@ -495,7 +495,7 @@ const TodaysPatients = () => {
           <div className="flex-1 bg-gray-800 rounded-lg flex flex-col min-h-0">
             <div className="p-4 border-b border-gray-700 flex-shrink-0">
               <div className="flex items-center justify-between">
-                <h3 className="text-white font-medium">Checked-In ({appointments.filter(apt => apt.status === 'Checked-In' || apt.status === 'In Treatment' || apt.status === 'In Progress').length})</h3>
+                <h3 className="text-white font-medium">Checked-In ({appointments.filter(apt => apt?.status === 'Checked-In' || apt?.status === 'In Treatment' || apt?.status === 'In Progress').length})</h3>
               </div>
               <div className="mt-2">
                 <div className="grid grid-cols-5 gap-2 text-sm text-gray-400">
@@ -506,20 +506,20 @@ const TodaysPatients = () => {
               </div>
             </div>
             <div className="flex-1 overflow-y-auto p-4">
-              {appointments.filter(apt => apt.status === 'Checked-In' || apt.status === 'In Treatment' || apt.status === 'In Progress').length === 0 ? (
+              {appointments.filter(apt => apt?.status === 'Checked-In' || apt?.status === 'In Treatment' || apt?.status === 'In Progress').length === 0 ? (
                 <div className="text-center text-gray-400 text-sm py-8">
                   No appointments
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {appointments.filter(apt => apt.status === 'Checked-In' || apt.status === 'In Treatment' || apt.status === 'In Progress').map((appointment) => (
+                  {appointments.filter(apt => apt?.status === 'Checked-In' || apt?.status === 'In Treatment' || apt?.status === 'In Progress').map((appointment) => (
                     <div key={appointment._id} className="grid grid-cols-5 gap-2 items-center p-3 bg-gray-700 rounded hover:bg-gray-600">
                       <div className="text-sm text-white font-medium">
                         {formatTime(appointment.appointmentTime)}
                       </div>
                       <div className="col-span-2 text-sm cursor-pointer" onClick={() => handleViewPatient(appointment._id)}>
-                        <div className="text-white font-medium">{appointment.patient.fullName}</div>
-                        <div className="text-gray-400 text-xs">{appointment.visitType}</div>
+                        <div className="text-white font-medium">{appointment.patient?.fullName || 'Unknown Patient'}</div>
+                        <div className="text-gray-400 text-xs">{appointment.visitType || 'Regular Visit'}</div>
                         <div className="flex items-center gap-2 mt-1">
                           <button
                             onClick={(e) => {
@@ -576,7 +576,7 @@ const TodaysPatients = () => {
           <div className="flex-1 bg-gray-800 rounded-lg flex flex-col min-h-0">
             <div className="p-4 border-b border-gray-700 flex-shrink-0">
               <div className="flex items-center justify-between">
-                <h3 className="text-white font-medium">Checked Out ({appointments.filter(apt => apt.status === 'Checked-Out').length})</h3>
+                <h3 className="text-white font-medium">Checked Out ({appointments.filter(apt => apt?.status === 'Checked-Out').length})</h3>
               </div>
               <div className="mt-2">
                 <div className="grid grid-cols-3 gap-4 text-sm text-gray-400">
@@ -586,20 +586,20 @@ const TodaysPatients = () => {
               </div>
             </div>
             <div className="flex-1 overflow-y-auto p-4">
-              {appointments.filter(apt => apt.status === 'Checked-Out').length === 0 ? (
+              {appointments.filter(apt => apt?.status === 'Checked-Out').length === 0 ? (
                 <div className="text-center text-gray-400 text-sm py-8">
                   No appointments
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {appointments.filter(apt => apt.status === 'Checked-Out').map((appointment) => (
+                  {appointments.filter(apt => apt?.status === 'Checked-Out').map((appointment) => (
                     <div key={appointment._id} className="grid grid-cols-3 gap-4 items-center p-3 bg-gray-700 rounded hover:bg-gray-600">
                       <div className="text-sm text-white font-medium">
                         {formatTime(appointment.appointmentTime)}
                       </div>
                       <div className="col-span-2 text-sm cursor-pointer" onClick={() => handleViewPatient(appointment._id)}>
-                        <div className="text-white font-medium">{appointment.patient.fullName}</div>
-                        <div className="text-gray-400 text-xs">{appointment.visitType}</div>
+                        <div className="text-white font-medium">{appointment.patient?.fullName || 'Unknown Patient'}</div>
+                        <div className="text-gray-400 text-xs">{appointment.visitType || 'Regular Visit'}</div>
                         <div className="text-green-400 text-xs">✓ Checked Out</div>
                       </div>
                     </div>
