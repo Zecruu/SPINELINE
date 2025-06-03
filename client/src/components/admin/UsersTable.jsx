@@ -9,6 +9,14 @@ const UsersTable = ({ onUpdate }) => {
   const [filterClinic, setFilterClinic] = useState('all');
   const [clinics, setClinics] = useState([]);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [editUser, setEditUser] = useState(null);
+  const [editFormData, setEditFormData] = useState({
+    name: '',
+    email: '',
+    password: '',
+    role: '',
+    clinicId: ''
+  });
 
   useEffect(() => {
     loadUsers();
@@ -93,6 +101,56 @@ const UsersTable = ({ onUpdate }) => {
       console.error('Error deleting user:', error);
       setError(error.response?.data?.message || 'Failed to delete user');
       setDeleteConfirm(null);
+    }
+  };
+
+  const handleEditUser = (user) => {
+    setEditUser(user);
+    setEditFormData({
+      name: user.name,
+      email: user.email,
+      password: '',
+      role: user.role,
+      clinicId: user.clinicId
+    });
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+
+    try {
+      const token = localStorage.getItem('adminToken');
+      const response = await axios.put(
+        `/api/secret-admin/users/${editUser._id}`,
+        editFormData,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (response.data.success) {
+        // Update local state
+        setUsers(prev =>
+          prev.map(user =>
+            user._id === editUser._id
+              ? { ...user, ...response.data.user }
+              : user
+          )
+        );
+
+        setEditUser(null);
+        setEditFormData({
+          name: '',
+          email: '',
+          password: '',
+          role: '',
+          clinicId: ''
+        });
+
+        if (onUpdate) onUpdate();
+      }
+    } catch (error) {
+      console.error('Error updating user:', error);
+      setError(error.response?.data?.message || 'Failed to update user');
     }
   };
 
@@ -262,6 +320,12 @@ const UsersTable = ({ onUpdate }) => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex space-x-2">
                       <button
+                        onClick={() => handleEditUser(user)}
+                        className="px-3 py-1 rounded text-xs font-medium bg-blue-600 hover:bg-blue-700 text-white"
+                      >
+                        Edit
+                      </button>
+                      <button
                         onClick={() => toggleUserStatus(user._id, user.isActive)}
                         className={`px-3 py-1 rounded text-xs font-medium ${
                           user.isActive
@@ -323,6 +387,117 @@ const UsersTable = ({ onUpdate }) => {
                 Delete User
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit User Modal */}
+      {editUser && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-medium text-white mb-4">
+              Edit User
+            </h3>
+
+            {error && (
+              <div className="mb-4 p-3 bg-red-900 border border-red-700 rounded text-red-200 text-sm">
+                {error}
+              </div>
+            )}
+
+            <form onSubmit={handleEditSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">
+                  Name
+                </label>
+                <input
+                  type="text"
+                  value={editFormData.name}
+                  onChange={(e) => setEditFormData(prev => ({ ...prev, name: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  value={editFormData.email}
+                  onChange={(e) => setEditFormData(prev => ({ ...prev, email: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">
+                  New Password (leave blank to keep current)
+                </label>
+                <input
+                  type="password"
+                  value={editFormData.password}
+                  onChange={(e) => setEditFormData(prev => ({ ...prev, password: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter new password or leave blank"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">
+                  Role
+                </label>
+                <select
+                  value={editFormData.role}
+                  onChange={(e) => setEditFormData(prev => ({ ...prev, role: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                >
+                  <option value="doctor">Doctor</option>
+                  <option value="secretary">Secretary</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">
+                  Clinic ID
+                </label>
+                <select
+                  value={editFormData.clinicId}
+                  onChange={(e) => setEditFormData(prev => ({ ...prev, clinicId: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-600 rounded-md bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                >
+                  <option value="">Select Clinic</option>
+                  {clinics.map(clinic => (
+                    <option key={clinic.clinicId} value={clinic.clinicId}>
+                      {clinic.clinicName} ({clinic.clinicId})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditUser(null);
+                    setError('');
+                  }}
+                  className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                >
+                  Update User
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
