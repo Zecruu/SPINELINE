@@ -415,10 +415,10 @@ const TodaysPatients = () => {
               <div className="flex items-center justify-between">
                 <h3 className="text-white font-medium">Scheduled ({appointments.filter(apt => apt?.status === 'Scheduled').length})</h3>
               </div>
-              <div className="mt-2">
-                <div className="grid grid-cols-5 gap-2 text-sm text-gray-400">
-                  <span>Time</span>
-                  <span className="col-span-2">Patient</span>
+              <div className="mt-2 bg-gray-700 rounded p-2">
+                <div className="grid grid-cols-5 gap-2 text-sm text-gray-400 font-medium">
+                  <span className="border-r border-gray-600 pr-2">Time</span>
+                  <span className="col-span-2 border-r border-gray-600 pr-2">Patient</span>
                   <span className="text-right col-span-2">Actions</span>
                 </div>
               </div>
@@ -429,13 +429,13 @@ const TodaysPatients = () => {
                   No appointments
                 </div>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-1">
                   {appointments.filter(apt => apt?.status === 'Scheduled').map((appointment) => (
-                    <div key={appointment._id} className="grid grid-cols-5 gap-2 items-center p-3 bg-gray-700 rounded hover:bg-gray-600">
-                      <div className="text-sm text-white font-medium">
+                    <div key={appointment._id} className="grid grid-cols-5 gap-2 items-center p-3 bg-gray-700 rounded hover:bg-gray-600 border border-gray-600">
+                      <div className="text-sm text-white font-medium border-r border-gray-600 pr-2">
                         {formatTime(appointment.appointmentTime)}
                       </div>
-                      <div className="col-span-2 text-sm cursor-pointer" onClick={() => handleViewPatient(appointment._id)}>
+                      <div className="col-span-2 text-sm cursor-pointer border-r border-gray-600 pr-2" onClick={() => handleViewPatient(appointment._id)}>
                         <div className="text-white font-medium">{appointment.patient?.fullName || 'Unknown Patient'}</div>
                         <div className="text-gray-400 text-xs">{appointment.visitType || 'Regular Visit'}</div>
                         <div className="flex items-center gap-2 mt-1">
@@ -497,10 +497,10 @@ const TodaysPatients = () => {
               <div className="flex items-center justify-between">
                 <h3 className="text-white font-medium">Checked-In ({appointments.filter(apt => apt?.status === 'Checked-In' || apt?.status === 'In Treatment' || apt?.status === 'In Progress').length})</h3>
               </div>
-              <div className="mt-2">
-                <div className="grid grid-cols-5 gap-2 text-sm text-gray-400">
-                  <span>Time</span>
-                  <span className="col-span-2">Patient</span>
+              <div className="mt-2 bg-gray-700 rounded p-2">
+                <div className="grid grid-cols-5 gap-2 text-sm text-gray-400 font-medium">
+                  <span className="border-r border-gray-600 pr-2">Time</span>
+                  <span className="col-span-2 border-r border-gray-600 pr-2">Patient</span>
                   <span className="text-right col-span-2">Actions</span>
                 </div>
               </div>
@@ -511,13 +511,13 @@ const TodaysPatients = () => {
                   No appointments
                 </div>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-1">
                   {appointments.filter(apt => apt?.status === 'Checked-In' || apt?.status === 'In Treatment' || apt?.status === 'In Progress').map((appointment) => (
-                    <div key={appointment._id} className="grid grid-cols-5 gap-2 items-center p-3 bg-gray-700 rounded hover:bg-gray-600">
-                      <div className="text-sm text-white font-medium">
+                    <div key={appointment._id} className="grid grid-cols-5 gap-2 items-center p-3 bg-gray-700 rounded hover:bg-gray-600 border border-gray-600">
+                      <div className="text-sm text-white font-medium border-r border-gray-600 pr-2">
                         {formatTime(appointment.appointmentTime)}
                       </div>
-                      <div className="col-span-2 text-sm cursor-pointer" onClick={() => handleViewPatient(appointment._id)}>
+                      <div className="col-span-2 text-sm cursor-pointer border-r border-gray-600 pr-2" onClick={() => handleViewPatient(appointment._id)}>
                         <div className="text-white font-medium">{appointment.patient?.fullName || 'Unknown Patient'}</div>
                         <div className="text-gray-400 text-xs">{appointment.visitType || 'Regular Visit'}</div>
                         <div className="flex items-center gap-2 mt-1">
@@ -578,9 +578,9 @@ const TodaysPatients = () => {
               <div className="flex items-center justify-between">
                 <h3 className="text-white font-medium">Checked Out ({appointments.filter(apt => apt?.status === 'Checked-Out').length})</h3>
               </div>
-              <div className="mt-2">
-                <div className="grid grid-cols-3 gap-4 text-sm text-gray-400">
-                  <span>Time</span>
+              <div className="mt-2 bg-gray-700 rounded p-2">
+                <div className="grid grid-cols-3 gap-4 text-sm text-gray-400 font-medium">
+                  <span className="border-r border-gray-600 pr-2">Time</span>
                   <span className="col-span-2">Patient</span>
                 </div>
               </div>
@@ -591,10 +591,10 @@ const TodaysPatients = () => {
                   No appointments
                 </div>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-1">
                   {appointments.filter(apt => apt?.status === 'Checked-Out').map((appointment) => (
-                    <div key={appointment._id} className="grid grid-cols-3 gap-4 items-center p-3 bg-gray-700 rounded hover:bg-gray-600">
-                      <div className="text-sm text-white font-medium">
+                    <div key={appointment._id} className="grid grid-cols-3 gap-4 items-center p-3 bg-gray-700 rounded hover:bg-gray-600 border border-gray-600">
+                      <div className="text-sm text-white font-medium border-r border-gray-600 pr-2">
                         {formatTime(appointment.appointmentTime)}
                       </div>
                       <div className="col-span-2 text-sm cursor-pointer" onClick={() => handleViewPatient(appointment._id)}>

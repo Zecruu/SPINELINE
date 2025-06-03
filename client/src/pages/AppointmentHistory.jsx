@@ -276,24 +276,24 @@ const AppointmentHistory = () => {
         </div>
 
         {/* Results Table */}
-        <div className="flex-1 bg-gray-800 rounded-lg overflow-hidden">
-          <div className="p-4 border-b border-gray-700">
+        <div className="flex-1 bg-gray-800 rounded-lg overflow-hidden flex flex-col min-h-0">
+          <div className="p-4 border-b border-gray-700 flex-shrink-0">
             <h3 className="text-white font-medium">
               Appointment Records ({appointments.length})
             </h3>
           </div>
 
-          <div className="overflow-x-auto">
+          <div className="flex-1 overflow-auto">
             <table className="w-full">
-              <thead className="bg-gray-700">
+              <thead className="bg-gray-700 sticky top-0 z-10">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Date</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Time</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Patient</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Visit Type</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Status</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Provider</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Action Taken</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider border-r border-gray-600">Date</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider border-r border-gray-600">Time</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider border-r border-gray-600">Patient</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider border-r border-gray-600">Visit Type</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider border-r border-gray-600">Status</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider border-r border-gray-600">Provider</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider border-r border-gray-600">Action Taken</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Notes</th>
                 </tr>
               </thead>
@@ -306,28 +306,28 @@ const AppointmentHistory = () => {
                   </tr>
                 ) : (
                   appointments.map((appointment) => (
-                    <tr key={appointment._id} className="hover:bg-gray-700">
-                      <td className="px-4 py-4 whitespace-nowrap text-sm text-white">
+                    <tr key={appointment._id} className="hover:bg-gray-700 border-b border-gray-700">
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-white border-r border-gray-600">
                         {formatDate(appointment.appointmentDate)}
                       </td>
-                      <td className="px-4 py-4 whitespace-nowrap text-sm text-white">
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-white border-r border-gray-600">
                         {formatTime(appointment.appointmentTime)}
                       </td>
-                      <td className="px-4 py-4 whitespace-nowrap text-sm text-white">
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-white border-r border-gray-600">
                         {appointment.patient?.fullName || 'N/A'}
                       </td>
-                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-300">
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-300 border-r border-gray-600">
                         {appointment.visitType}
                       </td>
-                      <td className="px-4 py-4 whitespace-nowrap">
+                      <td className="px-4 py-4 whitespace-nowrap border-r border-gray-600">
                         <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(appointment.status)}`}>
                           {appointment.status}
                         </span>
                       </td>
-                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-300">
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-300 border-r border-gray-600">
                         {appointment.assignedDoctor || 'N/A'}
                       </td>
-                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-300">
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-300 border-r border-gray-600">
                         {appointment.actionTaken || '-'}
                       </td>
                       <td className="px-4 py-4 text-sm text-gray-300 max-w-xs truncate">
