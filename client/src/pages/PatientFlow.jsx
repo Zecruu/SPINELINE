@@ -246,28 +246,38 @@ const PatientFlow = () => {
 
       if (appointmentResponse.data.success) {
         const appointmentData = appointmentResponse.data.appointment;
-        console.log('🔍 Appointment data received:', appointmentData);
+        console.log('🔍 PATIENT FLOW: Appointment data received:', appointmentData);
+        console.log('🔍 PATIENT FLOW: Has patient?', !!appointmentData.patient);
+        console.log('🔍 PATIENT FLOW: Has patientId?', !!appointmentData.patientId);
+        console.log('🔍 PATIENT FLOW: Patient object:', appointmentData.patient);
+        console.log('🔍 PATIENT FLOW: PatientId object:', appointmentData.patientId);
         setAppointment(appointmentData);
 
         // Check if patient data is already included in appointment response
         if (appointmentData.patient) {
           // Patient data is already included in the appointment response
-          console.log('✅ Patient data found in appointment:', appointmentData.patient);
+          console.log('✅ PATIENT FLOW: Patient data found in appointment:', appointmentData.patient);
           setPatient(appointmentData.patient);
           setDoctorNotes(appointmentData.patient.doctorNotes || '');
         } else if (appointmentData.patientId) {
           // Load patient details separately if not included
           const patientId = typeof appointmentData.patientId === 'object' ? appointmentData.patientId._id : appointmentData.patientId;
-          console.log('🔍 Loading patient separately, ID:', patientId);
+          console.log('🔍 PATIENT FLOW: Loading patient separately, ID:', patientId);
           const patientResponse = await axios.get(`/api/patients/${patientId}`, {
             headers: { Authorization: `Bearer ${token}` }
           });
 
+          console.log('🔍 PATIENT FLOW: Patient response:', patientResponse.data);
+
           if (patientResponse.data.success) {
-            console.log('✅ Patient data loaded separately:', patientResponse.data.patient);
+            console.log('✅ PATIENT FLOW: Patient data loaded separately:', patientResponse.data.patient);
             setPatient(patientResponse.data.patient);
             setDoctorNotes(patientResponse.data.patient.doctorNotes || '');
+          } else {
+            console.error('❌ PATIENT FLOW: Failed to load patient data:', patientResponse.data);
           }
+        } else {
+          console.error('❌ PATIENT FLOW: No patient data or patientId found in appointment');
         }
 
         // Update appointment status to "In Progress" if it's "Checked-In"
