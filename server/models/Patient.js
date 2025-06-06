@@ -1,5 +1,33 @@
 const mongoose = require('mongoose');
 
+// Billing code copay/deductible schema
+const billingCodeSchema = new mongoose.Schema({
+  code: {
+    type: String,
+    required: [true, 'Billing code is required'],
+    trim: true,
+    uppercase: true
+  },
+  description: {
+    type: String,
+    trim: true
+  },
+  copayAmount: {
+    type: Number,
+    min: [0, 'Copay amount cannot be negative'],
+    default: 0
+  },
+  deductibleRemaining: {
+    type: Number,
+    min: [0, 'Deductible remaining cannot be negative'],
+    default: 0
+  },
+  isActive: {
+    type: Boolean,
+    default: true
+  }
+});
+
 // Insurance subdocument schema
 const insuranceSchema = new mongoose.Schema({
   insuranceName: {
@@ -27,6 +55,37 @@ const insuranceSchema = new mongoose.Schema({
   isPrimary: {
     type: Boolean,
     default: false
+  },
+  // Enhanced billing code specific information
+  billingCodes: [billingCodeSchema],
+  generalDeductible: {
+    type: Number,
+    min: [0, 'General deductible cannot be negative'],
+    default: 0
+  },
+  deductibleMet: {
+    type: Number,
+    min: [0, 'Deductible met cannot be negative'],
+    default: 0
+  },
+  deductibleRemaining: {
+    type: Number,
+    min: [0, 'Deductible remaining cannot be negative'],
+    default: 0
+  },
+  outOfPocketMax: {
+    type: Number,
+    min: [0, 'Out of pocket max cannot be negative'],
+    default: 0
+  },
+  outOfPocketMet: {
+    type: Number,
+    min: [0, 'Out of pocket met cannot be negative'],
+    default: 0
+  },
+  notes: {
+    type: String,
+    trim: true
   }
 });
 

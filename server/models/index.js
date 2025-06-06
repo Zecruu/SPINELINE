@@ -11,5 +11,7 @@ module.exports = {
   ServiceCode: require('./ServiceCode'),
   DiagnosticCode: require('./DiagnosticCode'),
   SoapTemplate: require('./SoapTemplate'),
+  DxCluster: require('./DxCluster'),
+  CareKit: require('./CareKit'),
   // Treatment: require('./Treatment')
 };
