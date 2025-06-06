@@ -210,36 +210,86 @@ module.exports = async function handler(req, res) {
       const { id } = req.query;
       const clinicId = user.clinicId;
 
-      const appointment = await Appointment.findOne({ _id: id, clinicId })
-        .populate('patientId') // Populate all patient fields for patient flow
-        .populate('assignedDoctor', 'firstName lastName');
+      console.log(`🩺 VERCEL APPOINTMENT ENDPOINT: Starting to load appointment ${id} for clinic ${clinicId}`);
 
-      if (!appointment) {
-        return res.status(404).json({
-          success: false,
-          message: 'Appointment not found'
+      try {
+        // Validate ObjectId format
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+          console.log(`❌ Invalid appointment ID format: ${id}`);
+          return res.status(400).json({
+            success: false,
+            message: 'Invalid appointment ID format'
+          });
+        }
+
+        console.log(`🔍 Searching for appointment with ID: ${id} in clinic: ${clinicId}`);
+
+        const appointment = await Appointment.findOne({ _id: id, clinicId })
+          .populate('patientId') // Populate all patient fields for patient flow
+          .populate('assignedDoctor', 'firstName lastName');
+
+        console.log(`🔍 Appointment found:`, !!appointment);
+
+        if (!appointment) {
+          console.log(`❌ Appointment ${id} not found in clinic ${clinicId}`);
+          return res.status(404).json({
+            success: false,
+            message: 'Appointment not found'
+          });
+        }
+
+        console.log(`🩺 VERCEL APPOINTMENT ENDPOINT: Loading appointment ${id}`);
+        console.log(`  - Appointment status: ${appointment.status}`);
+        console.log(`  - Patient ID: ${appointment.patientId?._id}`);
+        console.log(`  - Patient Name: ${appointment.patientId?.firstName} ${appointment.patientId?.lastName}`);
+        console.log(`  - Patient DOB: ${appointment.patientId?.dateOfBirth}`);
+        console.log(`  - Patient Gender: ${appointment.patientId?.gender}`);
+        console.log(`  - Patient Phone: ${appointment.patientId?.phone}`);
+        console.log(`  - Patient Email: ${appointment.patientId?.email}`);
+
+        // Ensure patient data is properly structured for the frontend
+        const appointmentData = {
+          ...appointment.toObject(),
+          patient: appointment.patientId ? {
+            ...appointment.patientId.toObject(),
+            fullName: `${appointment.patientId.firstName} ${appointment.patientId.lastName}`
+          } : null
+        };
+
+        console.log(`✅ Appointment data prepared successfully`);
+
+        res.json({
+          success: true,
+          appointment: appointmentData
         });
+
+      } catch (populateError) {
+        console.error(`❌ Error during appointment population:`, populateError);
+
+        // Try to get appointment without population as fallback
+        try {
+          console.log(`🔄 Attempting fallback without population...`);
+          const appointment = await Appointment.findOne({ _id: id, clinicId });
+
+          if (!appointment) {
+            return res.status(404).json({
+              success: false,
+              message: 'Appointment not found'
+            });
+          }
+
+          console.log(`✅ Fallback appointment found, patientId: ${appointment.patientId}`);
+
+          res.json({
+            success: true,
+            appointment: appointment.toObject()
+          });
+
+        } catch (fallbackError) {
+          console.error(`❌ Fallback also failed:`, fallbackError);
+          throw populateError; // Throw original error
+        }
       }
-
-      console.log(`🩺 VERCEL APPOINTMENT ENDPOINT: Loading appointment ${id}`);
-      console.log(`  - Patient ID: ${appointment.patientId?._id}`);
-      console.log(`  - Patient Name: ${appointment.patientId?.firstName} ${appointment.patientId?.lastName}`);
-      console.log(`  - Patient DOB: ${appointment.patientId?.dateOfBirth}`);
-      console.log(`  - Patient Gender: ${appointment.patientId?.gender}`);
-
-      // Ensure patient data is properly structured for the frontend
-      const appointmentData = {
-        ...appointment.toObject(),
-        patient: appointment.patientId ? {
-          ...appointment.patientId.toObject(),
-          fullName: `${appointment.patientId.firstName} ${appointment.patientId.lastName}`
-        } : null
-      };
-
-      res.json({
-        success: true,
-        appointment: appointmentData
-      });
 
     } else {
       res.status(405).json({
@@ -249,8 +299,11 @@ module.exports = async function handler(req, res) {
     }
 
   } catch (error) {
-    console.error('Appointment update error:', error);
-    
+    console.error('❌ Appointment endpoint error:', error);
+    console.error('❌ Error stack:', error.stack);
+    console.error('❌ Error name:', error.name);
+    console.error('❌ Error message:', error.message);
+
     if (error.message === 'No token provided' || error.name === 'JsonWebTokenError') {
       return res.status(401).json({
         success: false,
@@ -261,7 +314,8 @@ module.exports = async function handler(req, res) {
     res.status(500).json({
       success: false,
       message: 'Server error',
-      error: error.message
+      error: error.message,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 }
