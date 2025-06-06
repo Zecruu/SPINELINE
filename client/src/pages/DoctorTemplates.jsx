@@ -17,11 +17,10 @@ import {
 
 const DoctorTemplates = () => {
   const [user, setUser] = useState(null);
-  const [activeTab, setActiveTab] = useState('soap');
+  const [activeTab, setActiveTab] = useState('boosters');
   const [templates, setTemplates] = useState({
+    boosters: [],
     soap: [],
-    procedures: [],
-    diagnostics: [],
     alerts: []
   });
   const [loading, setLoading] = useState(true);
@@ -33,10 +32,9 @@ const DoctorTemplates = () => {
   const navigate = useNavigate();
 
   const tabs = [
-    { id: 'soap', label: 'SOAP Templates', icon: DocumentTextIcon, count: templates.soap.length },
-    { id: 'procedures', label: 'Procedure Bundles', icon: ClipboardDocumentListIcon, count: templates.procedures.length },
-    { id: 'diagnostics', label: 'Diagnostic Templates', icon: BeakerIcon, count: templates.diagnostics.length },
-    { id: 'alerts', label: 'Alert Templates', icon: ExclamationTriangleIcon, count: templates.alerts.length }
+    { id: 'boosters', label: '🧠 Code Boosters', icon: BeakerIcon, count: templates.boosters?.length || 0 },
+    { id: 'soap', label: '🗒️ SOAP Templates', icon: DocumentTextIcon, count: templates.soap.length },
+    { id: 'alerts', label: '📋 Alert Templates', icon: ExclamationTriangleIcon, count: templates.alerts.length }
   ];
 
   const commonTags = [
@@ -69,37 +67,32 @@ const DoctorTemplates = () => {
       setLoading(true);
       const token = localStorage.getItem('userToken');
 
+      // Load Code Boosters (unified procedure and diagnostic bundles)
+      const boostersResponse = await axios.get('/api/code-boosters', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
       // Load SOAP templates
       const soapResponse = await axios.get('/api/soap-templates', {
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      // Load other template types (you'll need to create these endpoints)
-      const procedureResponse = await axios.get('/api/templates/procedures', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      const diagnosticResponse = await axios.get('/api/templates/diagnostics', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
+      // Load Alert templates
       const alertResponse = await axios.get('/api/templates/alerts', {
         headers: { Authorization: `Bearer ${token}` }
       });
 
       setTemplates({
+        boosters: boostersResponse.data.boosters || [],
         soap: soapResponse.data.templates || [],
-        procedures: procedureResponse.data.templates || [],
-        diagnostics: diagnosticResponse.data.templates || [],
         alerts: alertResponse.data.templates || []
       });
     } catch (error) {
       console.error('Error loading templates:', error);
       // Set empty arrays if endpoints don't exist yet
       setTemplates({
+        boosters: [],
         soap: [],
-        procedures: [],
-        diagnostics: [],
         alerts: []
       });
     } finally {
@@ -127,14 +120,11 @@ const DoctorTemplates = () => {
       let endpoint;
 
       switch (type) {
+        case 'boosters':
+          endpoint = `/api/code-boosters/${templateId}`;
+          break;
         case 'soap':
           endpoint = `/api/soap-templates/${templateId}`;
-          break;
-        case 'procedures':
-          endpoint = `/api/templates/procedures/${templateId}`;
-          break;
-        case 'diagnostics':
-          endpoint = `/api/templates/diagnostics/${templateId}`;
           break;
         case 'alerts':
           endpoint = `/api/templates/alerts/${templateId}`;
@@ -319,9 +309,8 @@ const DoctorTemplates = () => {
 const TemplateCard = ({ template, type, onEdit, onDelete }) => {
   const getTypeIcon = () => {
     switch (type) {
+      case 'boosters': return BeakerIcon;
       case 'soap': return DocumentTextIcon;
-      case 'procedures': return ClipboardDocumentListIcon;
-      case 'diagnostics': return BeakerIcon;
       case 'alerts': return ExclamationTriangleIcon;
       default: return DocumentTextIcon;
     }
@@ -392,22 +381,17 @@ const TemplateModal = ({ template, type, onClose, onSave }) => {
 
   function getDefaultContent(templateType) {
     switch (templateType) {
+      case 'boosters':
+        return {
+          codes: [],
+          notes: ''
+        };
       case 'soap':
         return {
           subjective: '',
           objective: '',
           assessment: '',
           plan: ''
-        };
-      case 'procedures':
-        return {
-          codes: [],
-          notes: ''
-        };
-      case 'diagnostics':
-        return {
-          codes: [],
-          notes: ''
         };
       case 'alerts':
         return {
@@ -434,14 +418,11 @@ const TemplateModal = ({ template, type, onClose, onSave }) => {
       if (template) {
         // Editing existing template
         switch (type) {
+          case 'boosters':
+            endpoint = `/api/code-boosters/${template._id}`;
+            break;
           case 'soap':
             endpoint = `/api/soap-templates/${template._id}`;
-            break;
-          case 'procedures':
-            endpoint = `/api/templates/procedures/${template._id}`;
-            break;
-          case 'diagnostics':
-            endpoint = `/api/templates/diagnostics/${template._id}`;
             break;
           case 'alerts':
             endpoint = `/api/templates/alerts/${template._id}`;
@@ -451,14 +432,11 @@ const TemplateModal = ({ template, type, onClose, onSave }) => {
       } else {
         // Creating new template
         switch (type) {
+          case 'boosters':
+            endpoint = '/api/code-boosters';
+            break;
           case 'soap':
             endpoint = '/api/soap-templates';
-            break;
-          case 'procedures':
-            endpoint = '/api/templates/procedures';
-            break;
-          case 'diagnostics':
-            endpoint = '/api/templates/diagnostics';
             break;
           case 'alerts':
             endpoint = '/api/templates/alerts';
@@ -482,6 +460,101 @@ const TemplateModal = ({ template, type, onClose, onSave }) => {
 
   const renderContentEditor = () => {
     switch (type) {
+      case 'boosters':
+        return (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm text-gray-400 mb-2">Codes *</label>
+              <div className="space-y-2">
+                {(formData.content.codes || []).map((code, index) => (
+                  <div key={index} className="flex gap-2 items-center">
+                    <input
+                      type="text"
+                      value={code.code || ''}
+                      onChange={(e) => {
+                        const newCodes = [...(formData.content.codes || [])];
+                        newCodes[index] = { ...newCodes[index], code: e.target.value };
+                        setFormData(prev => ({
+                          ...prev,
+                          content: { ...prev.content, codes: newCodes }
+                        }));
+                      }}
+                      className="w-24 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm"
+                      placeholder="Code"
+                    />
+                    <input
+                      type="text"
+                      value={code.description || ''}
+                      onChange={(e) => {
+                        const newCodes = [...(formData.content.codes || [])];
+                        newCodes[index] = { ...newCodes[index], description: e.target.value };
+                        setFormData(prev => ({
+                          ...prev,
+                          content: { ...prev.content, codes: newCodes }
+                        }));
+                      }}
+                      className="flex-1 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm"
+                      placeholder="Description"
+                    />
+                    <select
+                      value={code.type || 'CPT'}
+                      onChange={(e) => {
+                        const newCodes = [...(formData.content.codes || [])];
+                        newCodes[index] = { ...newCodes[index], type: e.target.value };
+                        setFormData(prev => ({
+                          ...prev,
+                          content: { ...prev.content, codes: newCodes }
+                        }));
+                      }}
+                      className="w-20 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm"
+                    >
+                      <option value="CPT">CPT</option>
+                      <option value="ICD-10">ICD-10</option>
+                      <option value="HCPCS">HCPCS</option>
+                    </select>
+                    <button
+                      onClick={() => {
+                        const newCodes = (formData.content.codes || []).filter((_, i) => i !== index);
+                        setFormData(prev => ({
+                          ...prev,
+                          content: { ...prev.content, codes: newCodes }
+                        }));
+                      }}
+                      className="px-2 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+                <button
+                  onClick={() => {
+                    const newCodes = [...(formData.content.codes || []), { code: '', description: '', type: 'CPT' }];
+                    setFormData(prev => ({
+                      ...prev,
+                      content: { ...prev.content, codes: newCodes }
+                    }));
+                  }}
+                  className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+                >
+                  + Add Code
+                </button>
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm text-gray-400 mb-2">Notes</label>
+              <textarea
+                value={formData.content.notes || ''}
+                onChange={(e) => setFormData(prev => ({
+                  ...prev,
+                  content: { ...prev.content, notes: e.target.value }
+                }))}
+                rows={3}
+                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Additional notes for this code booster..."
+              />
+            </div>
+          </div>
+        );
       case 'soap':
         return (
           <div className="space-y-4">

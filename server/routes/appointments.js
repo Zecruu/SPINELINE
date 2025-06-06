@@ -54,24 +54,46 @@ router.get('/doctor/today', async (req, res) => {
     });
 
     // Format the response to match secretary API structure exactly
-    const formattedAppointments = appointments.map(apt => ({
-      _id: apt._id,
-      appointmentTime: apt.appointmentTime,
-      formattedTime: apt.formattedTime,
-      visitType: apt.visitType,
-      status: apt.status,
-      isCheckedOut: apt.isCheckedOut,
-      patient: apt.patientId ? {
-        _id: apt.patientId._id,
-        fullName: `${apt.patientId.firstName} ${apt.patientId.lastName}`,
-        recordNumber: apt.patientId.recordNumber,
-        phone: apt.patientId.phone,
-        email: apt.patientId.email,
-        dateOfBirth: apt.patientId.dateOfBirth
-      } : null,
-      notes: apt.notes,
-      chiefComplaint: apt.chiefComplaint
-    }));
+    const formattedAppointments = appointments.map(apt => {
+      console.log(`🔍 Processing appointment ${apt._id} - Patient ID: ${apt.patientId?._id}, Patient Name: ${apt.patientId?.firstName} ${apt.patientId?.lastName}`);
+
+      return {
+        _id: apt._id,
+        appointmentTime: apt.appointmentTime,
+        formattedTime: apt.formattedTime,
+        visitType: apt.visitType,
+        status: apt.status,
+        isCheckedOut: apt.isCheckedOut,
+        patient: apt.patientId ? {
+          _id: apt.patientId._id,
+          fullName: `${apt.patientId.firstName} ${apt.patientId.lastName}`,
+          recordNumber: apt.patientId.recordNumber,
+          phone: apt.patientId.phone,
+          email: apt.patientId.email,
+          dateOfBirth: apt.patientId.dateOfBirth
+        } : {
+          _id: 'unknown',
+          fullName: 'Unknown Patient',
+          recordNumber: 'N/A',
+          phone: 'N/A',
+          email: 'N/A',
+          dateOfBirth: null
+        },
+        // Also include patientId for backward compatibility
+        patientId: apt.patientId ? {
+          _id: apt.patientId._id,
+          fullName: `${apt.patientId.firstName} ${apt.patientId.lastName}`,
+          firstName: apt.patientId.firstName,
+          lastName: apt.patientId.lastName,
+          recordNumber: apt.patientId.recordNumber,
+          phone: apt.patientId.phone,
+          email: apt.patientId.email,
+          dateOfBirth: apt.patientId.dateOfBirth
+        } : null,
+        notes: apt.notes,
+        chiefComplaint: apt.chiefComplaint
+      };
+    });
 
     console.log(`📊 Found ${formattedAppointments.length} appointments for doctor (formatted with same structure as secretary)`);
 
