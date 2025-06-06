@@ -79,12 +79,16 @@ export default async function handler(req, res) {
     // Use MongoDB native aggregation through mongoose connection
     const db = mongoose.connection.db;
 
-    // Get today's appointments for this doctor
+    console.log(`🩺 VERCEL DOCTOR ENDPOINT: Getting appointments for doctor ${userId} in clinic ${clinicId}`);
+
+    // Get today's appointments for this clinic (same as secretary view for now)
+    // TODO: Filter by assignedDoctor once that field is properly populated
     const appointments = await db.collection('appointments').aggregate([
       {
         $match: {
           clinicId,
-          assignedDoctor: new mongoose.Types.ObjectId(userId),
+          // Temporarily removed assignedDoctor filter to show all clinic appointments
+          // assignedDoctor: new mongoose.Types.ObjectId(userId),
           appointmentDate: {
             $gte: startOfDay,
             $lte: endOfDay
@@ -126,19 +130,28 @@ export default async function handler(req, res) {
       }
     ]).toArray();
 
+    console.log(`🩺 VERCEL DOCTOR ENDPOINT: Found ${appointments.length} appointments`);
+    appointments.forEach(apt => {
+      console.log(`  - Patient: ${apt.patient?.firstName} ${apt.patient?.lastName} at ${apt.appointmentTime} (${apt.status})`);
+      console.log(`    Assigned Doctor: ${apt.assignedDoctor} (Current User: ${userId})`);
+    });
+
     // Ensure all appointments have required fields
     const safeAppointments = appointments.map(appointment => ({
       _id: appointment._id,
       patientId: appointment.patientId,
-      patientName: appointment.patientName || 'Unknown Patient',
+      patientName: appointment.patient ? `${appointment.patient.firstName} ${appointment.patient.lastName}` : 'Unknown Patient',
       appointmentDate: appointment.appointmentDate,
       appointmentTime: appointment.appointmentTime,
       visitType: appointment.visitType || 'Regular Visit',
       status: appointment.status || 'Scheduled',
       assignedDoctor: appointment.assignedDoctor,
-      doctorName: appointment.doctorName || 'Unknown Doctor',
+      doctorName: appointment.doctor ? appointment.doctor.name : 'Unknown Doctor',
       clinicId: appointment.clinicId,
-      patient: appointment.patient || { name: 'Unknown Patient' },
+      patient: appointment.patient ? {
+        ...appointment.patient,
+        fullName: `${appointment.patient.firstName} ${appointment.patient.lastName}`
+      } : { fullName: 'Unknown Patient' },
       doctor: appointment.doctor || { name: 'Unknown Doctor' }
     }));
 

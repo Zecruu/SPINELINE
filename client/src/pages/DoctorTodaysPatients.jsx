@@ -65,11 +65,15 @@ const DoctorTodaysPatients = () => {
   // Load today's appointments for this doctor
   const loadTodaysAppointments = async () => {
     try {
+      console.log('🩺🩺🩺 DOCTOR COMPONENT: loadTodaysAppointments called!');
+      console.log('🩺🩺🩺 DOCTOR COMPONENT: About to call /api/appointments/doctor/today');
       setLoading(true);
       const token = localStorage.getItem('userToken');
+      console.log('🩺🩺🩺 DOCTOR COMPONENT: Token exists:', !!token);
       const response = await axios.get('/api/appointments/doctor/today', {
         headers: { Authorization: `Bearer ${token}` }
       });
+      console.log('🩺🩺🩺 DOCTOR COMPONENT: Response received:', response.status);
 
       if (response.data.success) {
         console.log('📅 Doctor\'s appointments loaded:', response.data.appointments);
