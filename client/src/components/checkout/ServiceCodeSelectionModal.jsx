@@ -104,10 +104,10 @@ const ServiceCodeSelectionModal = ({
   // Filter service codes based on search and category
   const filteredServiceCodes = serviceCodes.filter(code => {
     const matchesSearch = !searchTerm ||
-      code.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      code.description.toLowerCase().includes(searchTerm.toLowerCase());
+      (code?.code || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (code?.description || '').toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesCategory = selectedCategory === 'All' || code.category === selectedCategory;
+    const matchesCategory = selectedCategory === 'All' || code?.category === selectedCategory;
 
     return matchesSearch && matchesCategory;
   });

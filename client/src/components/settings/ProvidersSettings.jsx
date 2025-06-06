@@ -62,9 +62,9 @@ const ProvidersSettings = ({ user }) => {
 
   // Filter providers based on search
   const filteredProviders = providers.filter(provider =>
-    provider.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    provider.npi?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    provider.specialization?.toLowerCase().includes(searchTerm.toLowerCase())
+    (provider?.fullName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (provider?.npi || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (provider?.specialization || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   // Handle form submission for add/edit

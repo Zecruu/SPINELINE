@@ -113,8 +113,8 @@ const DiagnosticCodeSelectionModal = ({
 
     const searchLower = searchTerm.toLowerCase();
     return (
-      code.code.toLowerCase().includes(searchLower) ||
-      code.description.toLowerCase().includes(searchLower)
+      (code?.code || '').toLowerCase().includes(searchLower) ||
+      (code?.description || '').toLowerCase().includes(searchLower)
     );
   });
 

@@ -886,51 +886,51 @@ const PatientFlow = () => {
   // Filter codes based on search term with prioritized exact matches
   const filteredCodes = availableCodes
     .filter(code =>
-      code.code.toLowerCase().includes(codeSearchTerm.toLowerCase()) ||
-      code.description.toLowerCase().includes(codeSearchTerm.toLowerCase())
+      (code?.code || '').toLowerCase().includes(codeSearchTerm.toLowerCase()) ||
+      (code?.description || '').toLowerCase().includes(codeSearchTerm.toLowerCase())
     )
     .sort((a, b) => {
-      if (!codeSearchTerm) return a.description.localeCompare(b.description);
+      if (!codeSearchTerm) return (a?.description || '').localeCompare(b?.description || '');
 
       // Prioritize exact code matches first
-      const aCodeMatch = a.code.toLowerCase() === codeSearchTerm.toLowerCase();
-      const bCodeMatch = b.code.toLowerCase() === codeSearchTerm.toLowerCase();
+      const aCodeMatch = (a?.code || '').toLowerCase() === codeSearchTerm.toLowerCase();
+      const bCodeMatch = (b?.code || '').toLowerCase() === codeSearchTerm.toLowerCase();
       if (aCodeMatch && !bCodeMatch) return -1;
       if (!aCodeMatch && bCodeMatch) return 1;
 
       // Then prioritize codes that start with search term
-      const aCodeStarts = a.code.toLowerCase().startsWith(codeSearchTerm.toLowerCase());
-      const bCodeStarts = b.code.toLowerCase().startsWith(codeSearchTerm.toLowerCase());
+      const aCodeStarts = (a?.code || '').toLowerCase().startsWith(codeSearchTerm.toLowerCase());
+      const bCodeStarts = (b?.code || '').toLowerCase().startsWith(codeSearchTerm.toLowerCase());
       if (aCodeStarts && !bCodeStarts) return -1;
       if (!aCodeStarts && bCodeStarts) return 1;
 
       // Finally sort alphabetically
-      return a.description.localeCompare(b.description);
+      return (a?.description || '').localeCompare(b?.description || '');
     });
 
   // Filter diagnostic codes with prioritized exact matches
   const filteredDiagnosticCodes = availableDiagnosticCodes
     .filter(code =>
-      code.code.toLowerCase().includes(diagnosticSearchTerm.toLowerCase()) ||
-      code.description.toLowerCase().includes(diagnosticSearchTerm.toLowerCase())
+      (code?.code || '').toLowerCase().includes(diagnosticSearchTerm.toLowerCase()) ||
+      (code?.description || '').toLowerCase().includes(diagnosticSearchTerm.toLowerCase())
     )
     .sort((a, b) => {
-      if (!diagnosticSearchTerm) return a.description.localeCompare(b.description);
+      if (!diagnosticSearchTerm) return (a?.description || '').localeCompare(b?.description || '');
 
       // Prioritize exact code matches first
-      const aCodeMatch = a.code.toLowerCase() === diagnosticSearchTerm.toLowerCase();
-      const bCodeMatch = b.code.toLowerCase() === diagnosticSearchTerm.toLowerCase();
+      const aCodeMatch = (a?.code || '').toLowerCase() === diagnosticSearchTerm.toLowerCase();
+      const bCodeMatch = (b?.code || '').toLowerCase() === diagnosticSearchTerm.toLowerCase();
       if (aCodeMatch && !bCodeMatch) return -1;
       if (!aCodeMatch && bCodeMatch) return 1;
 
       // Then prioritize codes that start with search term
-      const aCodeStarts = a.code.toLowerCase().startsWith(diagnosticSearchTerm.toLowerCase());
-      const bCodeStarts = b.code.toLowerCase().startsWith(diagnosticSearchTerm.toLowerCase());
+      const aCodeStarts = (a?.code || '').toLowerCase().startsWith(diagnosticSearchTerm.toLowerCase());
+      const bCodeStarts = (b?.code || '').toLowerCase().startsWith(diagnosticSearchTerm.toLowerCase());
       if (aCodeStarts && !bCodeStarts) return -1;
       if (!aCodeStarts && bCodeStarts) return 1;
 
       // Finally sort alphabetically
-      return a.description.localeCompare(b.description);
+      return (a?.description || '').localeCompare(b?.description || '');
     });
 
   // Add procedure code to selection
@@ -2939,8 +2939,8 @@ const PatientFlow = () => {
               <div className="space-y-3">
                 {soapTemplates
                   .filter(template =>
-                    template.templateName.toLowerCase().includes(templateSearchTerm.toLowerCase()) ||
-                    template.category.toLowerCase().includes(templateSearchTerm.toLowerCase())
+                    (template?.templateName || '').toLowerCase().includes(templateSearchTerm.toLowerCase()) ||
+                    (template?.category || '').toLowerCase().includes(templateSearchTerm.toLowerCase())
                   )
                   .map((template) => (
                     <div key={template._id} className="bg-gray-700 rounded-lg p-4">
