@@ -10,6 +10,10 @@ router.use(verifyToken);
 // Get today's appointments for doctor
 router.get('/doctor/today', async (req, res) => {
   try {
+    console.log('🩺 DOCTOR ENDPOINT CALLED! /api/appointments/doctor/today');
+    console.log('🩺 Request headers:', req.headers.authorization ? 'Token present' : 'No token');
+    console.log('🩺 User data:', req.user);
+
     if (!isConnected()) {
       return res.status(503).json({
         success: false,
@@ -115,6 +119,10 @@ router.get('/doctor/today', async (req, res) => {
 // Get today's appointments for the authenticated user's clinic (secretary view)
 router.get('/today', async (req, res) => {
   try {
+    console.log('👩‍💼 SECRETARY ENDPOINT CALLED! /api/appointments/today');
+    console.log('👩‍💼 User role:', req.user?.role);
+    console.log('👩‍💼 User ID:', req.user?.userId);
+
     // Check database connection
     if (!isConnected()) {
       return res.status(503).json({
