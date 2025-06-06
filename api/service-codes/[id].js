@@ -229,8 +229,8 @@ export default async function handler(req, res) {
       // Update a service code (admin/doctor only)
       const { clinicId, role } = user;
 
-      // Only doctors and admins can update service codes
-      if (role !== 'doctor' && role !== 'admin') {
+      // Allow doctors, admins, and secretaries to update service codes
+      if (role !== 'doctor' && role !== 'admin' && role !== 'secretary') {
         return res.status(403).json({
           success: false,
           message: 'Insufficient permissions to update service codes'
@@ -260,8 +260,8 @@ export default async function handler(req, res) {
       // Delete a service code (soft delete - admin/doctor only)
       const { clinicId, role } = user;
 
-      // Only doctors and admins can delete service codes
-      if (role !== 'doctor' && role !== 'admin') {
+      // Allow doctors, admins, and secretaries to delete service codes
+      if (role !== 'doctor' && role !== 'admin' && role !== 'secretary') {
         return res.status(403).json({
           success: false,
           message: 'Insufficient permissions to delete service codes'

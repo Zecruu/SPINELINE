@@ -25,7 +25,6 @@ const CarePackagesSettings = ({ user }) => {
   const [formData, setFormData] = useState({
     code: '',
     description: '',
-    unitRate: '',
     totalSessions: '',
     validityDays: '90',
     includedCodes: [],
@@ -88,18 +87,13 @@ const CarePackagesSettings = ({ user }) => {
     setSuccess('');
 
     // Validation
-    if (!formData.code || !formData.description || !formData.unitRate || !formData.totalSessions) {
+    if (!formData.code || !formData.description || !formData.totalSessions) {
       setError('Please fill in all required fields');
       return;
     }
 
     if (formData.includedCodes.length === 0) {
       setError('Please select at least one service code for the package');
-      return;
-    }
-
-    if (isNaN(formData.unitRate) || parseFloat(formData.unitRate) < 0) {
-      setError('Package rate must be a valid positive number');
       return;
     }
 
@@ -116,7 +110,7 @@ const CarePackagesSettings = ({ user }) => {
       const payload = {
         code: formData.code,
         description: formData.description,
-        unitRate: parseFloat(formData.unitRate),
+        unitRate: 0, // Packages don't have a cash value - they're session-based
         isPackage: true,
         isActive: formData.isActive,
         packageDetails: {
@@ -153,7 +147,6 @@ const CarePackagesSettings = ({ user }) => {
       setFormData({
         code: '',
         description: '',
-        unitRate: '',
         totalSessions: '',
         validityDays: '90',
         includedCodes: [],
@@ -202,7 +195,6 @@ const CarePackagesSettings = ({ user }) => {
     setFormData({
       code: pkg.code,
       description: pkg.description,
-      unitRate: pkg.unitRate.toString(),
       totalSessions: pkg.packageDetails?.totalSessions?.toString() || '',
       validityDays: pkg.packageDetails?.validityDays?.toString() || '90',
       includedCodes: pkg.packageDetails?.includedCodes?.map(ic => {
@@ -292,10 +284,10 @@ const CarePackagesSettings = ({ user }) => {
                   Sessions
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                  Rate
+                  Validity
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                  Validity
+                  Type
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                   Status
@@ -308,14 +300,14 @@ const CarePackagesSettings = ({ user }) => {
             <tbody className="divide-y divide-gray-700">
               {loading ? (
                 <tr>
-                  <td colSpan="6" className="px-6 py-8 text-center">
+                  <td colSpan="5" className="px-6 py-8 text-center">
                     <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500 mx-auto"></div>
                     <p className="text-gray-400 mt-2">Loading packages...</p>
                   </td>
                 </tr>
               ) : filteredPackages.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="px-6 py-8 text-center">
+                  <td colSpan="5" className="px-6 py-8 text-center">
                     <CubeIcon className="h-12 w-12 text-gray-400 mx-auto mb-3" />
                     <p className="text-gray-400">
                       {searchTerm ? 'No packages match your search criteria' : 'No packages found'}
@@ -342,15 +334,15 @@ const CarePackagesSettings = ({ user }) => {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-300">
-                      {pkg.packageDetails?.totalSessions || 'N/A'}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm font-medium text-green-400">
-                        ${pkg.unitRate.toFixed(2)}
-                      </div>
+                      {pkg.packageDetails?.totalSessions || 'N/A'} sessions
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-300">
                       {pkg.packageDetails?.validityDays || 90} days
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-purple-900/30 text-purple-300">
+                        Session Package
+                      </span>
                     </td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
@@ -397,36 +389,18 @@ const CarePackagesSettings = ({ user }) => {
               </h3>
               
               <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1">
-                      Package Code *
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.code}
-                      onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-                      className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="e.g., PKG001"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1">
-                      Package Rate ($) *
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={formData.unitRate}
-                      onChange={(e) => setFormData({ ...formData, unitRate: e.target.value })}
-                      className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="0.00"
-                      required
-                    />
-                  </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-1">
+                    Package Code *
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.code}
+                    onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
+                    className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="e.g., PKG001"
+                    required
+                  />
                 </div>
 
                 <div>
@@ -523,7 +497,6 @@ const CarePackagesSettings = ({ user }) => {
                       setFormData({
                         code: '',
                         description: '',
-                        unitRate: '',
                         totalSessions: '',
                         validityDays: '90',
                         includedCodes: [],

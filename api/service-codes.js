@@ -315,8 +315,8 @@ async function handleGet(req, res, user) {
 async function handlePost(req, res, user) {
   const { clinicId, role } = user;
 
-  // Only doctors and admins can create service codes
-  if (role !== 'doctor' && role !== 'admin') {
+  // Allow doctors, admins, and secretaries to create service codes/packages
+  if (role !== 'doctor' && role !== 'admin' && role !== 'secretary') {
     return res.status(403).json({
       success: false,
       message: 'Insufficient permissions to create service codes'
