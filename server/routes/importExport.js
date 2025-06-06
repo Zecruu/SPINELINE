@@ -9,7 +9,10 @@ const { verifyToken } = require('../middleware/auth');
 const Patient = require('../models/Patient');
 const Appointment = require('../models/Appointment');
 const ServiceCode = require('../models/ServiceCode');
+const DiagnosticCode = require('../models/DiagnosticCode');
 const Checkout = require('../models/Checkout');
+const Ledger = require('../models/Ledger');
+const SoapTemplate = require('../models/SoapTemplate');
 const User = require('../models/User');
 
 // Configure multer for file uploads
@@ -219,6 +222,96 @@ router.get('/export', verifyToken, async (req, res) => {
         filename = `checkouts-export-${new Date().toISOString().split('T')[0]}`;
         break;
 
+      case 'ledger':
+        const ledgerQuery = { clinicId };
+        if (dateFilter && Object.keys(dateFilter).length > 0) {
+          ledgerQuery.transactionDate = dateFilter;
+        }
+
+        const ledgerRecords = await Ledger.find(ledgerQuery)
+          .populate('patientId', 'firstName lastName recordNumber')
+          .lean();
+
+        data = ledgerRecords.map(record => ({
+          transactionDate: new Date(record.transactionDate).toLocaleDateString(),
+          patientName: record.patientId ? `${record.patientId.firstName} ${record.patientId.lastName}` : 'Unknown',
+          recordNumber: record.patientId?.recordNumber || '',
+          transactionType: record.transactionType,
+          description: record.description,
+          amount: record.amount,
+          balance: record.balance,
+          paymentMethod: record.paymentMethod || '',
+          receiptNumber: record.receiptNumber || '',
+          notes: record.notes || ''
+        }));
+        headers = ['transactionDate', 'patientName', 'recordNumber', 'transactionType', 'description', 'amount', 'balance', 'paymentMethod', 'receiptNumber', 'notes'];
+        filename = `ledger-export-${new Date().toISOString().split('T')[0]}`;
+        break;
+
+      case 'soap-notes':
+        // For SOAP notes, we'll export from appointments that have SOAP data
+        const soapQuery = {
+          clinicId,
+          $or: [
+            { 'soapNotes.subjective': { $exists: true, $ne: '' } },
+            { 'soapNotes.objective': { $exists: true, $ne: '' } },
+            { 'soapNotes.assessment': { $exists: true, $ne: '' } },
+            { 'soapNotes.plan': { $exists: true, $ne: '' } }
+          ]
+        };
+        if (dateFilter && Object.keys(dateFilter).length > 0) {
+          soapQuery.appointmentDate = dateFilter;
+        }
+
+        const soapAppointments = await Appointment.find(soapQuery)
+          .populate('patientId', 'firstName lastName recordNumber')
+          .lean();
+
+        data = soapAppointments.map(apt => ({
+          appointmentDate: new Date(apt.appointmentDate).toLocaleDateString(),
+          patientName: apt.patientId ? `${apt.patientId.firstName} ${apt.patientId.lastName}` : 'Unknown',
+          recordNumber: apt.patientId?.recordNumber || '',
+          visitType: apt.visitType,
+          subjective: apt.soapNotes?.subjective || '',
+          objective: apt.soapNotes?.objective || '',
+          assessment: apt.soapNotes?.assessment || '',
+          plan: apt.soapNotes?.plan || '',
+          painScale: apt.soapNotes?.painScale || '',
+          vitalSigns: apt.soapNotes?.vitalSigns ? JSON.stringify(apt.soapNotes.vitalSigns) : '',
+          providerName: apt.providerName || ''
+        }));
+        headers = ['appointmentDate', 'patientName', 'recordNumber', 'visitType', 'subjective', 'objective', 'assessment', 'plan', 'painScale', 'vitalSigns', 'providerName'];
+        filename = `soap-notes-export-${new Date().toISOString().split('T')[0]}`;
+        break;
+
+      case 'signatures':
+        // Export patient signatures from checkouts
+        const signatureQuery = {
+          clinicId,
+          signature: { $exists: true, $ne: null }
+        };
+        if (dateFilter && Object.keys(dateFilter).length > 0) {
+          signatureQuery.checkoutDate = dateFilter;
+        }
+
+        const signatureCheckouts = await Checkout.find(signatureQuery)
+          .populate('patientId', 'firstName lastName recordNumber')
+          .lean();
+
+        data = signatureCheckouts.map(checkout => ({
+          checkoutDate: new Date(checkout.checkoutDate).toLocaleDateString(),
+          patientName: checkout.patientId ? `${checkout.patientId.firstName} ${checkout.patientId.lastName}` : 'Unknown',
+          recordNumber: checkout.patientId?.recordNumber || '',
+          receiptNumber: checkout.receiptNumber,
+          signatureType: checkout.signatureType || 'Digital',
+          signatureTimestamp: checkout.signatureTimestamp ? new Date(checkout.signatureTimestamp).toLocaleString() : '',
+          totalAmount: checkout.totalAmount,
+          serviceCodes: checkout.serviceCodes?.map(sc => sc.code).join(', ') || ''
+        }));
+        headers = ['checkoutDate', 'patientName', 'recordNumber', 'receiptNumber', 'signatureType', 'signatureTimestamp', 'totalAmount', 'serviceCodes'];
+        filename = `signatures-export-${new Date().toISOString().split('T')[0]}`;
+        break;
+
       default:
         return res.status(400).json({ message: 'Invalid export type' });
     }
@@ -318,13 +411,43 @@ router.get('/template/:type', verifyToken, async (req, res) => {
         filename = 'service-codes-import-template';
         break;
       case 'icd-codes':
-        headers = ['code', 'description', 'category'];
+        headers = ['code', 'description', 'category', 'bodySystem', 'commonlyUsed'];
         sampleData = [{
           code: 'M54.5',
           description: 'Low back pain',
-          category: 'Musculoskeletal'
+          category: 'Musculoskeletal',
+          bodySystem: 'Spine',
+          commonlyUsed: 'Yes'
         }];
         filename = 'icd-codes-import-template';
+        break;
+      case 'ledger':
+        headers = ['patientRecordNumber', 'transactionDate', 'transactionType', 'description', 'amount', 'paymentMethod', 'notes'];
+        sampleData = [{
+          patientRecordNumber: 'P001',
+          transactionDate: '2025-01-15',
+          transactionType: 'Payment',
+          description: 'Chiropractic treatment payment',
+          amount: '75.00',
+          paymentMethod: 'Cash',
+          notes: 'Full payment received'
+        }];
+        filename = 'ledger-import-template';
+        break;
+      case 'soap-notes':
+        headers = ['appointmentDate', 'patientRecordNumber', 'visitType', 'subjective', 'objective', 'assessment', 'plan', 'painScale', 'providerName'];
+        sampleData = [{
+          appointmentDate: '2025-01-15',
+          patientRecordNumber: 'P001',
+          visitType: 'Regular Visit',
+          subjective: 'Patient reports lower back pain',
+          objective: 'Limited ROM in lumbar spine',
+          assessment: 'Lumbar strain',
+          plan: 'Chiropractic adjustment, ice therapy',
+          painScale: '6',
+          providerName: 'Dr. Smith'
+        }];
+        filename = 'soap-notes-import-template';
         break;
       default:
         return res.status(400).json({ message: 'Invalid template type' });
@@ -455,6 +578,15 @@ router.post('/process', verifyToken, async (req, res) => {
             break;
           case 'service-codes':
             await processServiceCodeImport(mappedData, clinicId, userName, duplicates);
+            break;
+          case 'icd-codes':
+            await processIcdCodeImport(mappedData, clinicId, userName, duplicates);
+            break;
+          case 'ledger':
+            await processLedgerImport(mappedData, clinicId, userName);
+            break;
+          case 'soap-notes':
+            await processSoapNotesImport(mappedData, clinicId, userName);
             break;
           default:
             throw new Error(`Unsupported import type: ${type}`);
@@ -614,6 +746,124 @@ async function processServiceCodeImport(data, clinicId, createdBy, duplicates) {
 
   const serviceCode = new ServiceCode(serviceCodeData);
   await serviceCode.save();
+}
+
+// Helper function to process ICD code import
+async function processIcdCodeImport(data, clinicId, createdBy, duplicates) {
+  // Check for duplicates
+  const existing = await DiagnosticCode.findOne({
+    clinicId,
+    code: data.code
+  });
+
+  if (existing) {
+    duplicates.push({
+      type: 'icd-code',
+      code: data.code,
+      description: data.description
+    });
+    return; // Skip duplicate
+  }
+
+  // Create diagnostic code record
+  const diagnosticCodeData = {
+    clinicId,
+    code: data.code.toUpperCase(),
+    description: data.description,
+    category: data.category || 'Other',
+    bodySystem: data.bodySystem || 'Other',
+    commonlyUsed: data.commonlyUsed === 'Yes' || data.commonlyUsed === 'true',
+    isActive: true,
+    imported: true,
+    importSource: 'CSV/Excel Import',
+    importedAt: new Date()
+  };
+
+  const diagnosticCode = new DiagnosticCode(diagnosticCodeData);
+  await diagnosticCode.save();
+}
+
+// Helper function to process ledger import
+async function processLedgerImport(data, clinicId, createdBy) {
+  // Find patient by record number
+  const patient = await Patient.findOne({
+    clinicId,
+    recordNumber: data.patientRecordNumber
+  });
+
+  if (!patient) {
+    throw new Error(`Patient not found: ${data.patientRecordNumber}`);
+  }
+
+  // Create ledger record
+  const ledgerData = {
+    patientId: patient._id,
+    clinicId,
+    transactionDate: new Date(data.transactionDate),
+    transactionType: data.transactionType,
+    description: data.description,
+    amount: parseFloat(data.amount) || 0,
+    paymentMethod: data.paymentMethod || '',
+    notes: data.notes || '',
+    createdBy,
+    imported: true,
+    importSource: 'CSV/Excel Import',
+    importedAt: new Date()
+  };
+
+  const ledger = new Ledger(ledgerData);
+  await ledger.save();
+}
+
+// Helper function to process SOAP notes import
+async function processSoapNotesImport(data, clinicId, createdBy) {
+  // Find patient by record number
+  const patient = await Patient.findOne({
+    clinicId,
+    recordNumber: data.patientRecordNumber
+  });
+
+  if (!patient) {
+    throw new Error(`Patient not found: ${data.patientRecordNumber}`);
+  }
+
+  // Find or create appointment for the date
+  let appointment = await Appointment.findOne({
+    clinicId,
+    patientId: patient._id,
+    appointmentDate: new Date(data.appointmentDate)
+  });
+
+  if (!appointment) {
+    // Create new appointment if it doesn't exist
+    appointment = new Appointment({
+      patientId: patient._id,
+      clinicId,
+      appointmentDate: new Date(data.appointmentDate),
+      appointmentTime: '09:00', // Default time
+      visitType: data.visitType || 'Regular Visit',
+      status: 'Checked-Out',
+      providerName: data.providerName || '',
+      createdBy,
+      imported: true,
+      importSource: 'CSV/Excel Import',
+      importedAt: new Date()
+    });
+  }
+
+  // Add SOAP notes
+  appointment.soapNotes = {
+    subjective: data.subjective || '',
+    objective: data.objective || '',
+    assessment: data.assessment || '',
+    plan: data.plan || '',
+    painScale: parseInt(data.painScale) || null,
+    vitalSigns: {},
+    lastUpdated: new Date(),
+    updatedBy: createdBy
+  };
+
+  await appointment.save();
 }
 
 module.exports = router;
