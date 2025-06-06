@@ -1,4 +1,4 @@
-// Settings providers endpoint
+// Vercel API endpoint for individual provider operations
 const mongoose = require('mongoose');
 const jwt = require('jsonwebtoken');
 
@@ -73,10 +73,10 @@ const verifyToken = (req) => {
   return decoded;
 };
 
-module.exports = async function handler(req, res) {
-  // Add CORS headers
+export default async function handler(req, res) {
+  // Set CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
   if (req.method === 'OPTIONS') {
@@ -84,25 +84,41 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    // Verify token and get user info
+    // Verify authentication
     const user = verifyToken(req);
     
     // Connect to database
     await connectDB();
 
+    const { id: providerId } = req.query;
+
+    if (!providerId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Provider ID is required'
+      });
+    }
+
     if (req.method === 'GET') {
-      // Get all providers (doctors) for the clinic
-      const providers = await User.find({
+      // Get specific provider
+      const provider = await User.findOne({
+        _id: providerId,
         clinicId: user.clinicId,
         role: 'doctor',
         isActive: true
       })
       .select('name email role profile isActive createdAt')
-      .sort({ name: 1 })
       .lean();
 
-      // Format providers for frontend (map fields to match frontend expectations)
-      const formattedProviders = providers.map(provider => ({
+      if (!provider) {
+        return res.status(404).json({
+          success: false,
+          message: 'Provider not found'
+        });
+      }
+
+      // Format provider for frontend (map fields to match frontend expectations)
+      const formattedProvider = {
         _id: provider._id,
         fullName: provider.name,
         npi: provider.profile?.npiNumber || '',
@@ -112,74 +128,52 @@ module.exports = async function handler(req, res) {
         email: provider.email,
         role: provider.role,
         createdAt: provider.createdAt
-      }));
+      };
 
       res.json({
         success: true,
-        providers: formattedProviders
+        provider: formattedProvider
       });
 
-    } else if (req.method === 'POST') {
-      // Create new provider (doctor)
-      const {
-        fullName,
-        name,
-        email,
-        password,
-        npi,
-        npiNumber,
-        licenseNumber,
-        specialization,
-        specialties,
-        phone
-      } = req.body;
+    } else if (req.method === 'PUT') {
+      // Update provider
+      const updateData = req.body;
 
       // Map frontend fields to database fields
-      const providerName = fullName || name;
-      const providerNpi = npi || npiNumber;
-      const providerSpecialties = specialization ? [specialization] : (specialties || []);
-
-      // Validate required fields
-      if (!providerName || !email) {
-        return res.status(400).json({
-          success: false,
-          message: 'Name and email are required'
-        });
+      const update = {};
+      if (updateData.fullName !== undefined) update.name = updateData.fullName;
+      if (updateData.email !== undefined) update.email = updateData.email;
+      if (updateData.npi !== undefined) update['profile.npiNumber'] = updateData.npi;
+      if (updateData.licenseNumber !== undefined) update['profile.licenseNumber'] = updateData.licenseNumber;
+      if (updateData.specialization !== undefined) {
+        update['profile.specialties'] = updateData.specialization ? [updateData.specialization] : [];
       }
+      if (updateData.isActive !== undefined) update.isActive = updateData.isActive;
 
-      // Check if user already exists
-      const existingUser = await User.findOne({ email: email.toLowerCase() });
-      if (existingUser) {
-        return res.status(400).json({
-          success: false,
-          message: 'User with this email already exists'
-        });
-      }
-
-      // Generate default password if not provided
-      const defaultPassword = password || 'TempPass123!';
-
-      // Hash password
-      const bcrypt = require('bcrypt');
-      const hashedPassword = await bcrypt.hash(defaultPassword, 12);
-
-      // Create provider
-      const provider = new User({
-        name: providerName,
-        email: email.toLowerCase(),
-        password: hashedPassword,
-        role: 'doctor',
-        clinicId: user.clinicId,
-        isActive: true,
-        profile: {
-          npiNumber: providerNpi,
-          licenseNumber,
-          specialties: providerSpecialties,
-          phone
+      // Remove undefined values
+      Object.keys(update).forEach(key => {
+        if (update[key] === undefined) {
+          delete update[key];
         }
       });
 
-      await provider.save();
+      // Update provider
+      const provider = await User.findOneAndUpdate(
+        { 
+          _id: providerId, 
+          clinicId: user.clinicId,
+          role: 'doctor'
+        },
+        update,
+        { new: true }
+      ).select('name email role profile isActive');
+
+      if (!provider) {
+        return res.status(404).json({
+          success: false,
+          message: 'Provider not found'
+        });
+      }
 
       // Format response to match frontend expectations
       const formattedProvider = {
@@ -195,8 +189,32 @@ module.exports = async function handler(req, res) {
 
       res.json({
         success: true,
-        message: 'Provider created successfully',
+        message: 'Provider updated successfully',
         provider: formattedProvider
+      });
+
+    } else if (req.method === 'DELETE') {
+      // Deactivate provider (soft delete)
+      const provider = await User.findOneAndUpdate(
+        { 
+          _id: providerId, 
+          clinicId: user.clinicId,
+          role: 'doctor'
+        },
+        { isActive: false },
+        { new: true }
+      );
+
+      if (!provider) {
+        return res.status(404).json({
+          success: false,
+          message: 'Provider not found'
+        });
+      }
+
+      res.json({
+        success: true,
+        message: 'Provider deleted successfully'
       });
 
     } else {
@@ -207,19 +225,19 @@ module.exports = async function handler(req, res) {
     }
 
   } catch (error) {
-    console.error('Settings providers error:', error);
+    console.error('Provider API error:', error);
     
     if (error.message === 'No token provided' || error.name === 'JsonWebTokenError') {
       return res.status(401).json({
         success: false,
-        message: 'Unauthorized'
+        message: 'Authentication required'
       });
     }
 
     res.status(500).json({
       success: false,
       message: 'Server error',
-      error: error.message
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
     });
   }
 }
