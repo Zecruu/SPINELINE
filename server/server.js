@@ -61,6 +61,7 @@ app.use('/api/appointments', require('./routes/appointments'));
 app.use('/api/service-codes', require('./routes/serviceCodes'));
 app.use('/api/diagnostic-codes', require('./routes/diagnosticCodes'));
 app.use('/api/soap-templates', require('./routes/soapTemplates'));
+app.use('/api/code-boosters', require('./routes/codeBoosters'));
 app.use('/api/templates', require('./routes/templates'));
 app.use('/api/audit', require('./routes/audit'));
 app.use('/api/reports', require('./routes/reports'));

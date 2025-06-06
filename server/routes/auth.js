@@ -59,8 +59,13 @@ const userLogin = async (req, res) => {
     }
 
     // Check password
+    console.log(`🔐 Checking password for user: ${user.email}`);
+    console.log(`🔐 User has password hash: ${!!user.passwordHash}`);
+    console.log(`🔐 Password provided: ${!!password}`);
+
     const isPasswordValid = await user.comparePassword(password);
     if (!isPasswordValid) {
+      console.log(`❌ Password validation failed for user: ${user.email}`);
       return res.status(401).json({
         success: false,
         message: 'Invalid credentials'

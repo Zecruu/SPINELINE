@@ -151,7 +151,24 @@ userSchema.pre('save', async function(next) {
 
 // Instance method to check password
 userSchema.methods.comparePassword = async function(candidatePassword) {
-  return bcrypt.compare(candidatePassword, this.passwordHash);
+  // Check if password hash exists
+  if (!this.passwordHash) {
+    console.error(`❌ User ${this.email} has no password hash set`);
+    return false;
+  }
+
+  // Check if candidate password is provided
+  if (!candidatePassword) {
+    console.error(`❌ No password provided for user ${this.email}`);
+    return false;
+  }
+
+  try {
+    return await bcrypt.compare(candidatePassword, this.passwordHash);
+  } catch (error) {
+    console.error(`❌ Password comparison error for user ${this.email}:`, error.message);
+    return false;
+  }
 };
 
 // Update the updatedAt field before saving
