@@ -322,6 +322,15 @@ router.get('/:id', async (req, res) => {
     const { id } = req.params;
     const clinicId = req.user.clinicId;
 
+    // Validate ObjectId format
+    const mongoose = require('mongoose');
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid patient ID format'
+      });
+    }
+
     const patient = await Patient.findOne({ _id: id, clinicId });
 
     if (!patient) {
@@ -330,6 +339,7 @@ router.get('/:id', async (req, res) => {
         message: 'Patient not found'
       });
     }
+
 
     // Add computed fields
     const patientData = {
