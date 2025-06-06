@@ -211,7 +211,7 @@ module.exports = async function handler(req, res) {
       const clinicId = user.clinicId;
 
       const appointment = await Appointment.findOne({ _id: id, clinicId })
-        .populate('patientId', 'firstName lastName recordNumber email phone')
+        .populate('patientId') // Populate all patient fields for patient flow
         .populate('assignedDoctor', 'firstName lastName');
 
       if (!appointment) {
@@ -221,9 +221,24 @@ module.exports = async function handler(req, res) {
         });
       }
 
+      console.log(`🩺 VERCEL APPOINTMENT ENDPOINT: Loading appointment ${id}`);
+      console.log(`  - Patient ID: ${appointment.patientId?._id}`);
+      console.log(`  - Patient Name: ${appointment.patientId?.firstName} ${appointment.patientId?.lastName}`);
+      console.log(`  - Patient DOB: ${appointment.patientId?.dateOfBirth}`);
+      console.log(`  - Patient Gender: ${appointment.patientId?.gender}`);
+
+      // Ensure patient data is properly structured for the frontend
+      const appointmentData = {
+        ...appointment.toObject(),
+        patient: appointment.patientId ? {
+          ...appointment.patientId.toObject(),
+          fullName: `${appointment.patientId.firstName} ${appointment.patientId.lastName}`
+        } : null
+      };
+
       res.json({
         success: true,
-        appointment
+        appointment: appointmentData
       });
 
     } else {
