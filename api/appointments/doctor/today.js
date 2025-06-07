@@ -80,6 +80,18 @@ export default async function handler(req, res) {
     const db = mongoose.connection.db;
 
     console.log(`🩺 VERCEL DOCTOR ENDPOINT: Getting appointments for doctor ${userId} in clinic ${clinicId}`);
+    console.log(`📅 Today: ${today.toISOString().split('T')[0]}`);
+    console.log(`📅 Start of day: ${startOfDay.toISOString()}`);
+    console.log(`📅 End of day: ${endOfDay.toISOString()}`);
+
+    // First, let's see ALL appointments for this clinic
+    const allAppointments = await db.collection('appointments').find({ clinicId }).toArray();
+    console.log(`🔍 TOTAL appointments in clinic ${clinicId}: ${allAppointments.length}`);
+    allAppointments.forEach(apt => {
+      const aptDate = new Date(apt.appointmentDate);
+      const aptDateString = aptDate.toISOString().split('T')[0];
+      console.log(`  - Appointment: ${aptDateString} at ${apt.appointmentTime} (Status: ${apt.status}) - Patient ID: ${apt.patientId}`);
+    });
 
     // Get today's appointments for this clinic (same as secretary view for now)
     // TODO: Filter by assignedDoctor once that field is properly populated
