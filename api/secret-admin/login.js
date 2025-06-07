@@ -27,9 +27,9 @@ export default async function handler(req, res) {
       });
     }
 
-    // Hardcoded admin credentials (as per your requirements)
-    const ADMIN_USERNAME = 'spineline_admin';
-    const ADMIN_PASSWORD = 'SpineLine2024!';
+    // Admin credentials from environment variables
+    const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'spineline_admin';
+    const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'CHANGE_ME_IN_PRODUCTION';
 
     if (username !== ADMIN_USERNAME || password !== ADMIN_PASSWORD) {
       return res.status(401).json({

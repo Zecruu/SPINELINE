@@ -24,9 +24,9 @@ router.post('/login', async (req, res) => {
     if (username && password) {
       console.log('🔐 Secret admin login attempt:', username);
 
-      // Hardcoded secret admin credentials
-      const ADMIN_USERNAME = 'spineline_admin';
-      const ADMIN_PASSWORD = 'SpineLine2024!';
+      // Secret admin credentials from environment variables
+      const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'spineline_admin';
+      const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'CHANGE_ME_IN_PRODUCTION';
 
       if (username !== ADMIN_USERNAME || password !== ADMIN_PASSWORD) {
         return res.status(401).json({

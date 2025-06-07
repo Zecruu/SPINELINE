@@ -88,11 +88,9 @@ CORS_ORIGIN=https://your-domain.com
 
 Access the admin portal at: `https://your-domain.com/secret-admin`
 
-**Default Credentials:**
-- Email: `admin@spineline.com`
-- Password: `SpineLine2024!`
+**⚠️ SECURITY:** Set your admin credentials in environment variables before deployment!
 
-**⚠️ IMPORTANT:** Change these credentials immediately after first login!
+See [SECURITY.md](./SECURITY.md) for detailed security configuration.
 
 ## 🛠️ Local Development
 

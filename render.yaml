@@ -21,9 +21,9 @@ services:
       - key: JWT_EXPIRES_IN
         value: 7d
       - key: ADMIN_EMAIL
-        value: admin@spineline.com
+        sync: false
       - key: ADMIN_PASSWORD
-        value: SpineLine2024!
+        sync: false
     autoDeploy: true
 
   # Frontend Static Site
