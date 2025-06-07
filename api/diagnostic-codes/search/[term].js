@@ -1,4 +1,4 @@
-// Vercel API endpoint for diagnostic codes
+// Vercel API endpoint for diagnostic code search
 const mongoose = require('mongoose');
 const jwt = require('jsonwebtoken');
 
@@ -33,7 +33,7 @@ const connectDB = async () => {
     });
 
     isConnected = true;
-    console.log('✅ MongoDB Connected Successfully!');
+    console.log('✅ MongoDB Connected for diagnostic code search');
   } catch (error) {
     console.error('❌ MongoDB Connection Failed:', error.message);
     isConnected = false;
@@ -43,6 +43,13 @@ const connectDB = async () => {
 
 // Diagnostic Code Schema
 const diagnosticCodeSchema = new mongoose.Schema({
+  clinicId: {
+    type: String,
+    required: [true, 'Clinic ID is required'],
+    trim: true,
+    uppercase: true,
+    index: true
+  },
   code: {
     type: String,
     required: [true, 'Diagnostic code is required'],
@@ -115,10 +122,10 @@ const diagnosticCodeSchema = new mongoose.Schema({
 });
 
 // Indexes for efficient queries
-diagnosticCodeSchema.index({ code: 1 }, { unique: true });
-diagnosticCodeSchema.index({ category: 1, isActive: 1 });
-diagnosticCodeSchema.index({ bodySystem: 1, isActive: 1 });
-diagnosticCodeSchema.index({ commonlyUsed: 1, isActive: 1 });
+diagnosticCodeSchema.index({ clinicId: 1, code: 1 }, { unique: true });
+diagnosticCodeSchema.index({ clinicId: 1, category: 1, isActive: 1 });
+diagnosticCodeSchema.index({ clinicId: 1, bodySystem: 1, isActive: 1 });
+diagnosticCodeSchema.index({ clinicId: 1, commonlyUsed: 1, isActive: 1 });
 
 // Text index for search functionality
 diagnosticCodeSchema.index({
@@ -131,25 +138,7 @@ diagnosticCodeSchema.index({
   }
 });
 
-// Static methods
-diagnosticCodeSchema.statics.findByClinic = function(clinicId, options = {}) {
-  const query = { clinicId, isActive: true };
-
-  if (options.category) {
-    query.category = options.category;
-  }
-
-  if (options.bodySystem) {
-    query.bodySystem = options.bodySystem;
-  }
-
-  if (options.commonlyUsed !== undefined) {
-    query.commonlyUsed = options.commonlyUsed;
-  }
-
-  return this.find(query).sort({ commonlyUsed: -1, usageCount: -1, code: 1 });
-};
-
+// Static search method
 diagnosticCodeSchema.statics.searchCodes = function(clinicId, searchTerm, options = {}) {
   const query = {
     clinicId,
@@ -174,7 +163,7 @@ diagnosticCodeSchema.statics.searchCodes = function(clinicId, searchTerm, option
 
   return this.find(query)
     .sort({ commonlyUsed: -1, usageCount: -1, code: 1 })
-    .limit(options.limit || 100);
+    .limit(options.limit || 50);
 };
 
 const DiagnosticCode = mongoose.models.DiagnosticCode || mongoose.model('DiagnosticCode', diagnosticCodeSchema);
@@ -194,11 +183,18 @@ const verifyToken = (req) => {
 export default async function handler(req, res) {
   // Set CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
+  }
+
+  if (req.method !== 'GET') {
+    return res.status(405).json({
+      success: false,
+      message: 'Method not allowed'
+    });
   }
 
   try {
@@ -208,72 +204,40 @@ export default async function handler(req, res) {
     // Connect to database
     await connectDB();
 
-    if (req.method === 'GET') {
-      // Get all diagnostic codes
-      const { category, bodySystem, commonlyUsed, limit = 100, search } = req.query;
-      const { clinicId } = user;
+    const { term } = req.query;
+    const { category, bodySystem, commonlyUsed, limit = 20 } = req.query;
+    const { clinicId } = user;
 
-      console.log(`🔍 Getting diagnostic codes for clinic: ${clinicId}`);
-
-      let diagnosticCodes;
-
-      if (search && search.trim()) {
-        // Search functionality
-        const options = {};
-        if (category) options.category = category;
-        if (bodySystem) options.bodySystem = bodySystem;
-        if (commonlyUsed !== undefined) options.commonlyUsed = commonlyUsed === 'true';
-        options.limit = parseInt(limit);
-
-        diagnosticCodes = await DiagnosticCode.searchCodes(clinicId, search.trim(), options);
-      } else {
-        // Get all codes with filters
-        const options = {};
-        if (category) options.category = category;
-        if (bodySystem) options.bodySystem = bodySystem;
-        if (commonlyUsed !== undefined) options.commonlyUsed = commonlyUsed === 'true';
-
-        diagnosticCodes = await DiagnosticCode.findByClinic(clinicId, options)
-          .limit(parseInt(limit));
-      }
-
-      console.log(`📊 Found ${diagnosticCodes.length} diagnostic codes`);
-
-      res.json({
+    if (!term || term.trim().length < 1) {
+      return res.json({
         success: true,
-        diagnosticCodes
-      });
-
-    } else if (req.method === 'POST') {
-      // Create a new diagnostic code (admin/doctor only)
-      const { role } = user;
-
-      // Only doctors and admins can create diagnostic codes
-      if (role !== 'doctor' && role !== 'admin') {
-        return res.status(403).json({
-          success: false,
-          message: 'Insufficient permissions to create diagnostic codes'
-        });
-      }
-
-      const diagnosticCode = new DiagnosticCode(req.body);
-      await diagnosticCode.save();
-
-      res.status(201).json({
-        success: true,
-        message: 'Diagnostic code created successfully',
-        diagnosticCode
-      });
-
-    } else {
-      res.status(405).json({
-        success: false,
-        message: 'Method not allowed'
+        diagnosticCodes: []
       });
     }
 
+    console.log(`🔍 Searching diagnostic codes for: "${term}" in clinic: ${clinicId}`);
+
+    const options = {};
+    if (category) options.category = category;
+    if (bodySystem) options.bodySystem = bodySystem;
+    if (commonlyUsed !== undefined) options.commonlyUsed = commonlyUsed === 'true';
+    options.limit = parseInt(limit);
+
+    const diagnosticCodes = await DiagnosticCode.searchCodes(
+      clinicId,
+      term.trim(),
+      options
+    );
+
+    console.log(`📊 Found ${diagnosticCodes.length} diagnostic codes matching: "${term}"`);
+
+    res.json({
+      success: true,
+      diagnosticCodes
+    });
+
   } catch (error) {
-    console.error('Diagnostic codes API error:', error);
+    console.error('Search diagnostic codes error:', error);
     
     if (error.message === 'No token provided' || error.name === 'JsonWebTokenError') {
       return res.status(401).json({
@@ -284,7 +248,7 @@ export default async function handler(req, res) {
 
     res.status(500).json({
       success: false,
-      message: 'Server error',
+      message: 'Server error searching diagnostic codes',
       error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
     });
   }
