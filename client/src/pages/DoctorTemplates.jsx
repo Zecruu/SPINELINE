@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import DoctorLayout from '../components/doctor/DoctorLayout';
+import ClusterEditor from '../components/doctor/ClusterEditor';
 import {
   DocumentTextIcon,
   PlusIcon,
@@ -12,15 +13,18 @@ import {
   FunnelIcon,
   ClipboardDocumentListIcon,
   BeakerIcon,
-  ExclamationTriangleIcon
+  ExclamationTriangleIcon,
+  CurrencyDollarIcon,
+  ClipboardDocumentCheckIcon
 } from '@heroicons/react/24/outline';
 
 const DoctorTemplates = () => {
   const [user, setUser] = useState(null);
-  const [activeTab, setActiveTab] = useState('boosters');
+  const [activeTab, setActiveTab] = useState('soap');
   const [templates, setTemplates] = useState({
-    boosters: [],
     soap: [],
+    billingClusters: [],
+    diagnosisClusters: [],
     alerts: []
   });
   const [loading, setLoading] = useState(true);
@@ -32,8 +36,9 @@ const DoctorTemplates = () => {
   const navigate = useNavigate();
 
   const tabs = [
-    { id: 'boosters', label: '🧠 Code Boosters', icon: BeakerIcon, count: templates.boosters?.length || 0 },
     { id: 'soap', label: '🗒️ SOAP Templates', icon: DocumentTextIcon, count: templates.soap.length },
+    { id: 'billingClusters', label: '💰 Billing Clusters', icon: CurrencyDollarIcon, count: templates.billingClusters?.length || 0 },
+    { id: 'diagnosisClusters', label: '🩺 Diagnosis Clusters', icon: ClipboardDocumentCheckIcon, count: templates.diagnosisClusters?.length || 0 },
     { id: 'alerts', label: '📋 Alert Templates', icon: ExclamationTriangleIcon, count: templates.alerts.length }
   ];
 
@@ -67,13 +72,18 @@ const DoctorTemplates = () => {
       setLoading(true);
       const token = localStorage.getItem('userToken');
 
-      // Load Code Boosters (unified procedure and diagnostic bundles)
-      const boostersResponse = await axios.get('/api/code-boosters', {
+      // Load SOAP templates
+      const soapResponse = await axios.get('/api/soap-templates', {
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      // Load SOAP templates
-      const soapResponse = await axios.get('/api/soap-templates', {
+      // Load Billing Clusters
+      const billingClustersResponse = await axios.get('/api/billing-clusters', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      // Load Diagnosis Clusters
+      const diagnosisClustersResponse = await axios.get('/api/diagnosis-clusters', {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -83,8 +93,9 @@ const DoctorTemplates = () => {
       });
 
       setTemplates({
-        boosters: boostersResponse.data.boosters || [],
         soap: soapResponse.data.templates || [],
+        billingClusters: billingClustersResponse.data.clusters || [],
+        diagnosisClusters: diagnosisClustersResponse.data.clusters || [],
         alerts: alertResponse.data.templates || []
       });
     } catch (error) {
@@ -286,19 +297,37 @@ const DoctorTemplates = () => {
 
         {/* Create/Edit Template Modal */}
         {showCreateModal && (
-          <TemplateModal
-            template={editingTemplate}
-            type={activeTab}
-            onClose={() => {
-              setShowCreateModal(false);
-              setEditingTemplate(null);
-            }}
-            onSave={() => {
-              loadTemplates();
-              setShowCreateModal(false);
-              setEditingTemplate(null);
-            }}
-          />
+          <>
+            {(activeTab === 'billingClusters' || activeTab === 'diagnosisClusters') ? (
+              <ClusterEditor
+                cluster={editingTemplate}
+                type={activeTab}
+                onClose={() => {
+                  setShowCreateModal(false);
+                  setEditingTemplate(null);
+                }}
+                onSave={() => {
+                  loadTemplates();
+                  setShowCreateModal(false);
+                  setEditingTemplate(null);
+                }}
+              />
+            ) : (
+              <TemplateModal
+                template={editingTemplate}
+                type={activeTab}
+                onClose={() => {
+                  setShowCreateModal(false);
+                  setEditingTemplate(null);
+                }}
+                onSave={() => {
+                  loadTemplates();
+                  setShowCreateModal(false);
+                  setEditingTemplate(null);
+                }}
+              />
+            )}
+          </>
         )}
       </div>
     </DoctorLayout>
@@ -309,8 +338,9 @@ const DoctorTemplates = () => {
 const TemplateCard = ({ template, type, onEdit, onDelete }) => {
   const getTypeIcon = () => {
     switch (type) {
-      case 'boosters': return BeakerIcon;
       case 'soap': return DocumentTextIcon;
+      case 'billingClusters': return CurrencyDollarIcon;
+      case 'diagnosisClusters': return ClipboardDocumentCheckIcon;
       case 'alerts': return ExclamationTriangleIcon;
       default: return DocumentTextIcon;
     }
@@ -323,7 +353,7 @@ const TemplateCard = ({ template, type, onEdit, onDelete }) => {
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center space-x-2">
           <Icon className="h-5 w-5 text-blue-400" />
-          <h3 className="text-white font-medium">{template.templateName}</h3>
+          <h3 className="text-white font-medium">{template.templateName || template.name}</h3>
         </div>
         <div className="flex items-center space-x-1">
           <button
@@ -345,6 +375,24 @@ const TemplateCard = ({ template, type, onEdit, onDelete }) => {
 
       {template.description && (
         <p className="text-gray-400 text-sm mb-3">{template.description}</p>
+      )}
+
+      {/* Cluster codes preview */}
+      {(type === 'billingClusters' || type === 'diagnosisClusters') && template.codes && (
+        <div className="mb-3">
+          <div className="flex flex-wrap gap-1">
+            {template.codes.slice(0, 3).map((code, index) => (
+              <span key={index} className="px-2 py-1 bg-gray-700 text-xs text-gray-300 rounded">
+                {code.code}
+              </span>
+            ))}
+            {template.codes.length > 3 && (
+              <span className="px-2 py-1 bg-gray-600 text-xs text-gray-400 rounded">
+                +{template.codes.length - 3} more
+              </span>
+            )}
+          </div>
+        </div>
       )}
 
       <div className="flex items-center justify-between">
@@ -381,17 +429,22 @@ const TemplateModal = ({ template, type, onClose, onSave }) => {
 
   function getDefaultContent(templateType) {
     switch (templateType) {
-      case 'boosters':
-        return {
-          codes: [],
-          notes: ''
-        };
       case 'soap':
         return {
           subjective: '',
           objective: '',
           assessment: '',
           plan: ''
+        };
+      case 'billingClusters':
+        return {
+          codes: [],
+          tags: []
+        };
+      case 'diagnosisClusters':
+        return {
+          codes: [],
+          tags: []
         };
       case 'alerts':
         return {
@@ -418,11 +471,14 @@ const TemplateModal = ({ template, type, onClose, onSave }) => {
       if (template) {
         // Editing existing template
         switch (type) {
-          case 'boosters':
-            endpoint = `/api/code-boosters/${template._id}`;
-            break;
           case 'soap':
             endpoint = `/api/soap-templates/${template._id}`;
+            break;
+          case 'billingClusters':
+            endpoint = `/api/billing-clusters/${template._id}`;
+            break;
+          case 'diagnosisClusters':
+            endpoint = `/api/diagnosis-clusters/${template._id}`;
             break;
           case 'alerts':
             endpoint = `/api/templates/alerts/${template._id}`;
@@ -432,11 +488,14 @@ const TemplateModal = ({ template, type, onClose, onSave }) => {
       } else {
         // Creating new template
         switch (type) {
-          case 'boosters':
-            endpoint = '/api/code-boosters';
-            break;
           case 'soap':
             endpoint = '/api/soap-templates';
+            break;
+          case 'billingClusters':
+            endpoint = '/api/billing-clusters';
+            break;
+          case 'diagnosisClusters':
+            endpoint = '/api/diagnosis-clusters';
             break;
           case 'alerts':
             endpoint = '/api/templates/alerts';
