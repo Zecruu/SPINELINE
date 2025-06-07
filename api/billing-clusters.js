@@ -228,8 +228,8 @@ export default async function handler(req, res) {
       const { category, favorites, search } = req.query;
       const { clinicId, role } = user;
 
-      // Only doctors can access clusters
-      if (role !== 'doctor') {
+      // Only doctors can access clusters (if role is available)
+      if (role && role !== 'doctor') {
         return res.status(403).json({
           success: false,
           message: 'Access denied. Doctor role required.'
@@ -263,7 +263,7 @@ export default async function handler(req, res) {
             ...defaultCluster,
             clinicId,
             isDefault: true,
-            createdBy: user.name || user.email
+            createdBy: user.userId || user.name || user.email || 'Unknown'
           });
           await cluster.save();
         }
@@ -279,9 +279,10 @@ export default async function handler(req, res) {
 
     } else if (req.method === 'POST') {
       // Create new billing cluster
-      const { clinicId, role, name } = user;
+      const { clinicId, role, name, userId } = user;
 
-      if (role !== 'doctor') {
+      // Only doctors can create clusters (if role is available)
+      if (role && role !== 'doctor') {
         return res.status(403).json({
           success: false,
           message: 'Access denied. Doctor role required.'
@@ -319,7 +320,7 @@ export default async function handler(req, res) {
         description,
         tags: tags || [],
         codes,
-        createdBy: name || 'Unknown'
+        createdBy: userId || name || 'Unknown'
       });
 
       await newCluster.save();
