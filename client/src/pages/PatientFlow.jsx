@@ -253,10 +253,24 @@ const PatientFlow = () => {
         console.log('🔍 PATIENT FLOW: PatientId object:', appointmentData.patientId);
         setAppointment(appointmentData);
 
+        // Enhanced debugging for patient data
+        console.log('🔍 PATIENT FLOW: Full appointment data:', appointmentData);
+        console.log('🔍 PATIENT FLOW: Patient in appointment:', appointmentData.patient);
+        console.log('🔍 PATIENT FLOW: PatientId in appointment:', appointmentData.patientId);
+
         // Check if patient data is already included in appointment response
         if (appointmentData.patient) {
           // Patient data is already included in the appointment response
           console.log('✅ PATIENT FLOW: Patient data found in appointment:', appointmentData.patient);
+          console.log('✅ PATIENT FLOW: Patient fields:', {
+            firstName: appointmentData.patient.firstName,
+            lastName: appointmentData.patient.lastName,
+            recordNumber: appointmentData.patient.recordNumber,
+            phone: appointmentData.patient.phone,
+            email: appointmentData.patient.email,
+            dateOfBirth: appointmentData.patient.dateOfBirth,
+            gender: appointmentData.patient.gender
+          });
           setPatient(appointmentData.patient);
           setDoctorNotes(appointmentData.patient.doctorNotes || '');
         } else if (appointmentData.patientId) {
