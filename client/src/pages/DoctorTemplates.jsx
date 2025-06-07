@@ -131,11 +131,14 @@ const DoctorTemplates = () => {
       let endpoint;
 
       switch (type) {
-        case 'boosters':
-          endpoint = `/api/code-boosters/${templateId}`;
-          break;
         case 'soap':
           endpoint = `/api/soap-templates/${templateId}`;
+          break;
+        case 'billingClusters':
+          endpoint = `/api/billing-clusters/${templateId}`;
+          break;
+        case 'diagnosisClusters':
+          endpoint = `/api/diagnosis-clusters/${templateId}`;
           break;
         case 'alerts':
           endpoint = `/api/templates/alerts/${templateId}`;
@@ -149,6 +152,7 @@ const DoctorTemplates = () => {
       loadTemplates();
     } catch (error) {
       console.error('Error deleting template:', error);
+      alert(error.response?.data?.message || 'Failed to delete template');
     }
   };
 

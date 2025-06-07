@@ -184,9 +184,20 @@ const ClusterEditor = ({ cluster, type, onClose, onSave }) => {
     setLoading(true);
     try {
       const token = localStorage.getItem('userToken');
-      const endpoint = type === 'billingClusters' ? '/api/billing-clusters' : '/api/diagnosis-clusters';
-      
-      await axios.post(endpoint, formData, {
+      const baseEndpoint = type === 'billingClusters' ? '/api/billing-clusters' : '/api/diagnosis-clusters';
+
+      let endpoint, method;
+      if (cluster) {
+        // Editing existing cluster
+        endpoint = `${baseEndpoint}/${cluster._id}`;
+        method = 'put';
+      } else {
+        // Creating new cluster
+        endpoint = baseEndpoint;
+        method = 'post';
+      }
+
+      await axios[method](endpoint, formData, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
