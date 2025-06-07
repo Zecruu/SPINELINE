@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { XMarkIcon, MagnifyingGlassIcon, CheckCircleIcon, PlusIcon } from '@heroicons/react/24/outline';
+import BillingClusterSelector from '../bundles/BillingClusterSelector';
 
 const ProcedureCodeModal = ({
   isOpen,
@@ -87,6 +88,27 @@ const ProcedureCodeModal = ({
     );
   };
 
+  // Handle cluster selection
+  const handleClusterSelect = (clusterCodes) => {
+    const newCodes = clusterCodes.map(code => ({
+      code: code.code,
+      description: code.description,
+      units: 1,
+      notes: '',
+      unitRate: code.unitRate || 0,
+      duration: code.duration || 15,
+      isPackage: code.isPackage || false,
+      category: code.category || 'General'
+    }));
+
+    // Add codes that aren't already selected
+    setTempSelectedCodes(prev => {
+      const existingCodes = new Set(prev.map(c => c.code));
+      const codesToAdd = newCodes.filter(code => !existingCodes.has(code.code));
+      return [...prev, ...codesToAdd];
+    });
+  };
+
   // Handle apply
   const handleApply = () => {
     onApply(tempSelectedCodes);
@@ -131,6 +153,15 @@ const ProcedureCodeModal = ({
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder="Search by code, description, or category..."
                   className="w-full pl-10 pr-4 py-2 bg-gray-700 text-white rounded border border-gray-500 focus:border-blue-500 focus:outline-none"
+                />
+              </div>
+
+              {/* Cluster Selector */}
+              <div className="mb-4">
+                <BillingClusterSelector
+                  onSelectCodes={handleClusterSelect}
+                  buttonText="Insert Billing Cluster"
+                  className="w-full justify-center"
                 />
               </div>
 

@@ -330,15 +330,18 @@ const ClusterEditor = ({ cluster, type, onClose, onSave }) => {
 
             {/* Available Codes Table */}
             <div className="border border-gray-700 rounded-lg overflow-hidden">
-              <div className="bg-gray-700 px-4 py-2 border-b border-gray-600">
-                <div className="flex items-center gap-4 text-sm font-medium text-gray-300">
-                  <div className="w-8">Select</div>
-                  <div className="w-20">Code</div>
-                  <div className="flex-1">Description</div>
-                  {type === 'billingClusters' && <div className="w-20">Rate</div>}
+              {/* Table Header */}
+              <div className="bg-gray-700 border-b border-gray-600">
+                <div className="grid grid-cols-12 gap-2 px-4 py-3 text-sm font-medium text-gray-300">
+                  <div className="col-span-1 flex items-center justify-center">Select</div>
+                  <div className="col-span-2">Code</div>
+                  <div className="col-span-7">Description</div>
+                  {type === 'billingClusters' && <div className="col-span-2 text-right">Rate</div>}
+                  {type === 'diagnosisClusters' && <div className="col-span-2">Category</div>}
                 </div>
               </div>
-              
+
+              {/* Table Body */}
               <div className="max-h-96 overflow-y-auto">
                 {loadingCodes ? (
                   <div className="p-8 text-center text-gray-400">Loading codes...</div>
@@ -349,27 +352,38 @@ const ClusterEditor = ({ cluster, type, onClose, onSave }) => {
                     const codeKey = code._id || code.code;
                     const isSelected = selectedCodes.has(codeKey);
                     const isAlreadyAdded = formData.codes.some(existing => existing.code === code.code);
-                    
+
                     return (
                       <div
                         key={codeKey}
-                        className={`flex items-center gap-4 p-3 border-b border-gray-700 hover:bg-gray-700 transition-colors ${
+                        className={`grid grid-cols-12 gap-2 px-4 py-3 border-b border-gray-700 hover:bg-gray-750 transition-colors ${
                           isSelected ? 'bg-blue-900/20' : ''
                         } ${isAlreadyAdded ? 'opacity-50' : ''}`}
                       >
-                        <div className="w-8">
+                        <div className="col-span-1 flex items-center justify-center">
                           <input
                             type="checkbox"
                             checked={isSelected}
                             disabled={isAlreadyAdded}
                             onChange={() => handleCodeSelect(code)}
-                            className="rounded border-gray-600 text-blue-600 focus:ring-blue-500"
+                            className="rounded border-gray-600 text-blue-600 focus:ring-blue-500 focus:ring-offset-0"
                           />
                         </div>
-                        <div className="w-20 text-sm font-mono text-white">{code.code}</div>
-                        <div className="flex-1 text-sm text-gray-300">{code.description}</div>
+                        <div className="col-span-2">
+                          <span className="text-sm font-mono text-white">{code.code}</span>
+                        </div>
+                        <div className="col-span-7">
+                          <span className="text-sm text-gray-300">{code.description}</span>
+                        </div>
                         {type === 'billingClusters' && (
-                          <div className="w-20 text-sm text-gray-400">${code.unitRate || 0}</div>
+                          <div className="col-span-2 text-right">
+                            <span className="text-sm text-gray-400">${code.unitRate || 0}</span>
+                          </div>
+                        )}
+                        {type === 'diagnosisClusters' && (
+                          <div className="col-span-2">
+                            <span className="text-sm text-gray-400">{code.category || 'General'}</span>
+                          </div>
                         )}
                       </div>
                     );
