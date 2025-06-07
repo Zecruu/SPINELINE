@@ -184,7 +184,7 @@ const ClusterEditor = ({ cluster, type, onClose, onSave }) => {
     setLoading(true);
     try {
       const token = localStorage.getItem('userToken');
-      const baseEndpoint = type === 'billingClusters' ? '/api/billing-clusters' : '/api/diagnosis-clusters';
+      const baseEndpoint = type === 'billingClusters' ? '/api/billing-clusters' : '/api/dx-clusters';
 
       let endpoint, method;
       if (cluster) {

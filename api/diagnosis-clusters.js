@@ -6,20 +6,37 @@ const jwt = require('jsonwebtoken');
 let isConnected = false;
 
 const connectDB = async () => {
-  if (isConnected) {
+  if (isConnected && mongoose.connection.readyState === 1) {
     return;
   }
 
   try {
-    const conn = await mongoose.connect(process.env.MONGODB_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
+    mongoose.set('strictQuery', false);
+    mongoose.set('bufferCommands', false);
+
+    const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI;
+
+    if (!mongoUri) {
+      throw new Error('MongoDB URI not found in environment variables');
+    }
+
+    const conn = await mongoose.connect(mongoUri, {
+      serverSelectionTimeoutMS: 30000,
+      socketTimeoutMS: 45000,
+      bufferCommands: false,
+      maxPoolSize: 10,
+      minPoolSize: 1,
+      maxIdleTimeMS: 30000,
+      heartbeatFrequencyMS: 10000,
+      connectTimeoutMS: 30000,
+      family: 4
     });
 
     isConnected = conn.connections[0].readyState === 1;
-    console.log('MongoDB connected for diagnosis clusters');
+    console.log('✅ MongoDB connected for diagnosis clusters');
   } catch (error) {
-    console.error('MongoDB connection error:', error);
+    console.error('❌ MongoDB connection error:', error);
+    isConnected = false;
     throw error;
   }
 };
@@ -280,7 +297,12 @@ const verifyToken = (req) => {
   }
 
   const token = authHeader.substring(7);
-  const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret');
+
+  if (!process.env.JWT_SECRET) {
+    throw new Error('JWT_SECRET not configured');
+  }
+
+  const decoded = jwt.verify(token, process.env.JWT_SECRET);
   return decoded;
 };
 

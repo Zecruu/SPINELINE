@@ -1,4 +1,4 @@
-// Vercel API endpoint for dx clusters
+// Individual Dx Cluster API for Vercel
 const mongoose = require('mongoose');
 const jwt = require('jsonwebtoken');
 
@@ -33,7 +33,7 @@ const connectDB = async () => {
     });
 
     isConnected = true;
-    console.log('✅ MongoDB Connected Successfully!');
+    console.log('✅ MongoDB Connected for Dx Cluster operations');
   } catch (error) {
     console.error('❌ MongoDB Connection Failed:', error.message);
     isConnected = false;
@@ -41,7 +41,7 @@ const connectDB = async () => {
   }
 };
 
-// DX Cluster Schema
+// DX Cluster Schema (same as main file)
 const dxClusterSchema = new mongoose.Schema({
   clinicId: {
     type: String,
@@ -137,100 +137,6 @@ const dxClusterSchema = new mongoose.Schema({
   }
 });
 
-// Compound indexes for efficient queries
-dxClusterSchema.index({ clinicId: 1, isActive: 1 });
-dxClusterSchema.index({ clinicId: 1, name: 1 }, { unique: true });
-dxClusterSchema.index({ clinicId: 1, category: 1, isActive: 1 });
-dxClusterSchema.index({ clinicId: 1, isFavorite: 1, isActive: 1 });
-
-// Text index for search functionality
-dxClusterSchema.index({
-  name: 'text',
-  description: 'text'
-}, {
-  weights: {
-    name: 10,
-    description: 5
-  }
-});
-
-// Static methods
-dxClusterSchema.statics.findByClinic = function(clinicId, options = {}) {
-  const query = { clinicId, isActive: true };
-
-  if (!options.includeHidden) {
-    query.isHidden = { $ne: true };
-  }
-
-  if (options.category && options.category !== 'all') {
-    query.category = options.category;
-  }
-
-  return this.find(query).sort({ name: 1 });
-};
-
-dxClusterSchema.statics.getFavorites = function(clinicId) {
-  return this.find({
-    clinicId,
-    isActive: true,
-    isFavorite: true,
-    isHidden: { $ne: true }
-  }).sort({ name: 1 });
-};
-
-dxClusterSchema.statics.searchClusters = function(clinicId, searchTerm, options = {}) {
-  const query = {
-    clinicId,
-    isActive: true,
-    $or: [
-      { name: { $regex: searchTerm, $options: 'i' } },
-      { description: { $regex: searchTerm, $options: 'i' } }
-    ]
-  };
-
-  if (!options.includeHidden) {
-    query.isHidden = { $ne: true };
-  }
-
-  if (options.category && options.category !== 'all') {
-    query.category = options.category;
-  }
-
-  return this.find(query).sort({ name: 1 });
-};
-
-// Instance methods
-dxClusterSchema.methods.toggleFavorite = function() {
-  this.isFavorite = !this.isFavorite;
-  this.updatedAt = Date.now();
-  return this.save();
-};
-
-dxClusterSchema.methods.incrementUsage = function() {
-  this.usageCount += 1;
-  this.lastUsed = Date.now();
-  this.updatedAt = Date.now();
-  return this.save();
-};
-
-dxClusterSchema.methods.clone = async function(newName, userId) {
-  const clonedData = {
-    clinicId: this.clinicId,
-    name: newName,
-    description: this.description,
-    category: this.category,
-    codes: this.codes.map(code => ({
-      code: code.code,
-      description: code.description,
-      isActive: code.isActive
-    })),
-    createdBy: userId
-  };
-
-  const clonedCluster = new this.constructor(clonedData);
-  return await clonedCluster.save();
-};
-
 const DxCluster = mongoose.models.DxCluster || mongoose.model('DxCluster', dxClusterSchema);
 
 // Verify token and get user info
@@ -241,11 +147,11 @@ const verifyToken = (req) => {
   }
 
   const token = authHeader.substring(7);
-
+  
   if (!process.env.JWT_SECRET) {
     throw new Error('JWT_SECRET not configured');
   }
-
+  
   const decoded = jwt.verify(token, process.env.JWT_SECRET);
   return decoded;
 };
@@ -267,47 +173,44 @@ export default async function handler(req, res) {
     // Connect to database
     await connectDB();
 
-    if (req.method === 'GET') {
-      // Get all Dx Clusters for a clinic
-      const { category, favorites, search, includeHidden } = req.query;
-      const { clinicId } = user;
+    const { id } = req.query;
+    const { clinicId } = user;
 
-      let clusters;
-      
-      if (search) {
-        clusters = await DxCluster.searchClusters(clinicId, search, {
-          category,
-          includeHidden: includeHidden === 'true'
-        });
-      } else if (favorites === 'true') {
-        clusters = await DxCluster.getFavorites(clinicId);
-      } else {
-        clusters = await DxCluster.findByClinic(clinicId, {
-          category,
-          includeHidden: includeHidden === 'true'
+    if (req.method === 'GET') {
+      // Get single Dx Cluster
+      const cluster = await DxCluster.findOne({
+        _id: id,
+        clinicId,
+        isActive: true
+      });
+
+      if (!cluster) {
+        return res.status(404).json({
+          success: false,
+          message: 'Dx Cluster not found'
         });
       }
 
       res.json({
         success: true,
-        clusters
+        cluster
       });
 
-    } else if (req.method === 'POST') {
-      // Create new Dx Cluster
-      const { clinicId, userId } = user;
+    } else if (req.method === 'PUT') {
+      // Update Dx Cluster
       const { name, description, codes, category } = req.body;
 
       // Validate required fields
       if (!name || !codes || codes.length === 0) {
         return res.status(400).json({
           success: false,
-          message: 'Name and at least one ICD-10 code are required'
+          message: 'Name and at least one code are required'
         });
       }
 
-      // Check if cluster name already exists
+      // Check if another cluster with the same name exists (excluding current)
       const existingCluster = await DxCluster.findOne({
+        _id: { $ne: id },
         clinicId,
         name,
         isActive: true
@@ -316,26 +219,92 @@ export default async function handler(req, res) {
       if (existingCluster) {
         return res.status(400).json({
           success: false,
-          message: 'A Dx Cluster with this name already exists'
+          message: 'A cluster with this name already exists'
         });
       }
 
-      // Create new cluster
-      const newCluster = new DxCluster({
-        clinicId,
-        name,
-        description,
-        codes,
-        category: category || 'Custom',
-        createdBy: userId || 'Unknown'
+      // Update cluster
+      const updatedCluster = await DxCluster.findOneAndUpdate(
+        { _id: id, clinicId, isActive: true },
+        {
+          name,
+          description,
+          codes,
+          category: category || 'Custom',
+          updatedBy: user.userId || user.name || 'Unknown',
+          updatedAt: new Date()
+        },
+        { new: true }
+      );
+
+      if (!updatedCluster) {
+        return res.status(404).json({
+          success: false,
+          message: 'Dx Cluster not found'
+        });
+      }
+
+      res.json({
+        success: true,
+        message: 'Dx Cluster updated successfully',
+        cluster: updatedCluster
       });
 
-      await newCluster.save();
+    } else if (req.method === 'DELETE') {
+      // Delete Dx Cluster (soft delete)
+      const cluster = await DxCluster.findOne({ 
+        _id: id, 
+        clinicId, 
+        isActive: true 
+      });
 
-      res.status(201).json({
+      if (!cluster) {
+        return res.status(404).json({
+          success: false,
+          message: 'Dx Cluster not found'
+        });
+      }
+
+      // Soft delete
+      await DxCluster.findOneAndUpdate(
+        { _id: id, clinicId },
+        { 
+          isActive: false,
+          updatedBy: user.userId || user.name || 'Unknown',
+          updatedAt: new Date()
+        }
+      );
+
+      res.json({
         success: true,
-        message: 'Dx Cluster created successfully',
-        cluster: newCluster
+        message: 'Dx Cluster deleted successfully'
+      });
+
+    } else if (req.method === 'POST' && req.query.action === 'apply') {
+      // Apply cluster (increment usage)
+      const cluster = await DxCluster.findOne({
+        _id: id,
+        clinicId,
+        isActive: true
+      });
+
+      if (!cluster) {
+        return res.status(404).json({
+          success: false,
+          message: 'Dx Cluster not found'
+        });
+      }
+
+      // Increment usage count
+      cluster.usageCount += 1;
+      cluster.lastUsed = new Date();
+      cluster.updatedAt = new Date();
+      await cluster.save();
+
+      res.json({
+        success: true,
+        message: 'Dx Cluster applied successfully',
+        codes: cluster.codes.filter(code => code.isActive)
       });
 
     } else {
@@ -346,7 +315,7 @@ export default async function handler(req, res) {
     }
 
   } catch (error) {
-    console.error('Dx Clusters API error:', error);
+    console.error('Dx Cluster API error:', error);
     
     if (error.message === 'No token provided' || error.name === 'JsonWebTokenError') {
       return res.status(401).json({

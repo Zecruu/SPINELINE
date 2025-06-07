@@ -83,7 +83,7 @@ const DoctorTemplates = () => {
       });
 
       // Load Diagnosis Clusters
-      const diagnosisClustersResponse = await axios.get('/api/diagnosis-clusters', {
+      const diagnosisClustersResponse = await axios.get('/api/dx-clusters', {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -138,7 +138,7 @@ const DoctorTemplates = () => {
           endpoint = `/api/billing-clusters/${templateId}`;
           break;
         case 'diagnosisClusters':
-          endpoint = `/api/diagnosis-clusters/${templateId}`;
+          endpoint = `/api/dx-clusters/${templateId}`;
           break;
         case 'alerts':
           endpoint = `/api/templates/alerts/${templateId}`;
@@ -482,7 +482,7 @@ const TemplateModal = ({ template, type, onClose, onSave }) => {
             endpoint = `/api/billing-clusters/${template._id}`;
             break;
           case 'diagnosisClusters':
-            endpoint = `/api/diagnosis-clusters/${template._id}`;
+            endpoint = `/api/dx-clusters/${template._id}`;
             break;
           case 'alerts':
             endpoint = `/api/templates/alerts/${template._id}`;
@@ -499,7 +499,7 @@ const TemplateModal = ({ template, type, onClose, onSave }) => {
             endpoint = '/api/billing-clusters';
             break;
           case 'diagnosisClusters':
-            endpoint = '/api/diagnosis-clusters';
+            endpoint = '/api/dx-clusters';
             break;
           case 'alerts':
             endpoint = '/api/templates/alerts';
