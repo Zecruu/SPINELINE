@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, memo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { PlusIcon, TrashIcon, DocumentIcon, EyeIcon, ArrowDownTrayIcon, PencilIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import InsuranceCoverageTable from '../insurance/InsuranceCoverageTable';
 
 // Global modal state to persist across component re-renders
 let globalModalState = {
@@ -304,6 +305,14 @@ export const InsuranceTab = ({ formData, addInsurance, updateInsurance, removeIn
                 />
                 <span className="ml-2 text-sm text-gray-300">Primary Insurance</span>
               </label>
+            </div>
+
+            {/* Insurance Coverage Table */}
+            <div className="mt-6 border-t border-gray-600 pt-4">
+              <InsuranceCoverageTable
+                coveredCodes={insurance.coveredCodes || []}
+                onCodesChange={(codes) => updateInsurance(index, 'coveredCodes', codes)}
+              />
             </div>
           </div>
         ))}

@@ -7,6 +7,7 @@ import AppointmentHistory from '../components/doctor/AppointmentHistory';
 import PhysicalExamROM from '../components/doctor/PhysicalExamROM';
 import ProcedureCodeModal from '../components/doctor/ProcedureCodeModal';
 import DiagnosticCodeModal from '../components/doctor/DiagnosticCodeModal';
+import InsuranceCoverageCard from '../components/doctor/InsuranceCoverageCard';
 import SignatureCanvas from 'react-signature-canvas';
 
 import {
@@ -1726,6 +1727,12 @@ const PatientFlow = () => {
                 </div>
               </div>
             </div>
+
+            {/* Insurance Coverage Breakdown */}
+            <InsuranceCoverageCard
+              patient={patient}
+              selectedCodes={[...selectedCodes, ...selectedDiagnosticCodes]}
+            />
           </div>
         );
 

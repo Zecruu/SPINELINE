@@ -131,7 +131,8 @@ const PatientForm = ({ isOpen, onClose, patient = null, onSave }) => {
         groupId: '',
         copay: 0,
         expirationDate: '',
-        isPrimary: prev.insurances.length === 0
+        isPrimary: prev.insurances.length === 0,
+        coveredCodes: [] // Initialize empty coverage codes array
       }]
     }));
   }, []);

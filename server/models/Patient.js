@@ -28,6 +28,57 @@ const billingCodeSchema = new mongoose.Schema({
   }
 });
 
+// Coverage code schema for insurance procedure coverage mapping
+const coverageCodeSchema = new mongoose.Schema({
+  cptCode: {
+    type: String,
+    required: [true, 'CPT code is required'],
+    trim: true,
+    uppercase: true
+  },
+  description: {
+    type: String,
+    required: [true, 'Description is required'],
+    trim: true
+  },
+  unitsAllowed: {
+    type: Number,
+    required: [true, 'Units allowed is required'],
+    min: [0, 'Units allowed cannot be negative'],
+    default: 1
+  },
+  unitRate: {
+    type: Number,
+    required: [true, 'Unit rate is required'],
+    min: [0, 'Unit rate cannot be negative'],
+    default: 0
+  },
+  copayPerUnit: {
+    type: Number,
+    min: [0, 'Copay per unit cannot be negative'],
+    default: 0
+  },
+  totalAllowed: {
+    type: Number,
+    min: [0, 'Total allowed cannot be negative'],
+    default: 0
+  },
+  isActive: {
+    type: Boolean,
+    default: true
+  },
+  notes: {
+    type: String,
+    trim: true
+  }
+});
+
+// Pre-save middleware to calculate total allowed
+coverageCodeSchema.pre('save', function(next) {
+  this.totalAllowed = this.unitsAllowed * this.unitRate;
+  next();
+});
+
 // Insurance subdocument schema
 const insuranceSchema = new mongoose.Schema({
   insuranceName: {
@@ -58,6 +109,8 @@ const insuranceSchema = new mongoose.Schema({
   },
   // Enhanced billing code specific information
   billingCodes: [billingCodeSchema],
+  // New: Procedure coverage mapping
+  coveredCodes: [coverageCodeSchema],
   generalDeductible: {
     type: Number,
     min: [0, 'General deductible cannot be negative'],
