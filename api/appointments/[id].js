@@ -14,7 +14,7 @@ const connectDB = async () => {
     mongoose.set('strictQuery', false);
     mongoose.set('bufferCommands', false);
 
-    const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI;
+    const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb+srv://nomnk5138:Redzone12@spinev0.zbqy7hv.mongodb.net/?retryWrites=true&w=majority&appName=spinev0';
     
     if (!mongoUri) {
       throw new Error('MongoDB URI not found in environment variables');

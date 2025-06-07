@@ -11,15 +11,34 @@ const connectDB = async () => {
   }
 
   try {
-    const conn = await mongoose.connect(process.env.MONGODB_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
+    mongoose.set('strictQuery', false);
+    mongoose.set('bufferCommands', false);
+
+    const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb+srv://nomnk5138:Redzone12@spinev0.zbqy7hv.mongodb.net/?retryWrites=true&w=majority&appName=spinev0';
+
+    if (!mongoUri) {
+      throw new Error('MongoDB URI not found in environment variables');
+    }
+
+    console.log('🔍 Connecting to MongoDB for appointment flow debug...');
+
+    await mongoose.connect(mongoUri, {
+      serverSelectionTimeoutMS: 30000,
+      socketTimeoutMS: 45000,
+      bufferCommands: false,
+      maxPoolSize: 10,
+      minPoolSize: 1,
+      maxIdleTimeMS: 30000,
+      heartbeatFrequencyMS: 10000,
+      connectTimeoutMS: 30000,
+      family: 4
     });
 
-    isConnected = conn.connections[0].readyState === 1;
-    console.log('MongoDB connected for debug appointment flow');
+    isConnected = true;
+    console.log('✅ MongoDB Connected Successfully for appointment flow debug!');
   } catch (error) {
-    console.error('MongoDB connection error:', error);
+    console.error('❌ MongoDB Connection Failed for appointment flow debug:', error.message);
+    isConnected = false;
     throw error;
   }
 };
