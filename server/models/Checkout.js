@@ -140,6 +140,56 @@ const checkoutSchema = new mongoose.Schema({
     }
   },
 
+  // Insurance Coverage Usage
+  coverageUsed: [{
+    insuranceName: {
+      type: String,
+      required: [true, 'Insurance name is required'],
+      trim: true
+    },
+    cptCode: {
+      type: String,
+      required: [true, 'CPT code is required'],
+      trim: true,
+      uppercase: true
+    },
+    description: {
+      type: String,
+      required: [true, 'Description is required'],
+      trim: true
+    },
+    unitsUsed: {
+      type: Number,
+      required: [true, 'Units used is required'],
+      min: [0, 'Units used cannot be negative']
+    },
+    unitsRemaining: {
+      type: Number,
+      required: [true, 'Units remaining is required'],
+      min: [0, 'Units remaining cannot be negative']
+    },
+    unitRate: {
+      type: Number,
+      min: [0, 'Unit rate cannot be negative'],
+      default: 0
+    },
+    copayPerUnit: {
+      type: Number,
+      min: [0, 'Copay per unit cannot be negative'],
+      default: 0
+    },
+    totalCoverage: {
+      type: Number,
+      min: [0, 'Total coverage cannot be negative'],
+      default: 0
+    },
+    totalCopay: {
+      type: Number,
+      min: [0, 'Total copay cannot be negative'],
+      default: 0
+    }
+  }],
+
   // Next Appointment
   nextAppointment: {
     scheduledDate: {

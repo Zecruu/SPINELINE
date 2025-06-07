@@ -829,6 +829,61 @@ router.post('/:id/checkout', async (req, res) => {
       }
     }
 
+    // Handle insurance coverage unit deduction
+    const patient = appointment.patientId;
+    const coverageUsed = [];
+
+    if (patient.insurances && patient.insurances.length > 0 && serviceCodes.length > 0) {
+      let patientUpdated = false;
+
+      // Process each service code against insurance coverage
+      serviceCodes.forEach(serviceCode => {
+        const cptCode = serviceCode.code.toUpperCase();
+        const unitsUsed = serviceCode.units || 1;
+
+        // Check each insurance for coverage of this code
+        patient.insurances.forEach((insurance, insuranceIndex) => {
+          if (insurance.coveredCodes && insurance.coveredCodes.length > 0) {
+            const coverageIndex = insurance.coveredCodes.findIndex(
+              coverage => coverage.cptCode.toUpperCase() === cptCode
+            );
+
+            if (coverageIndex !== -1) {
+              const coverage = insurance.coveredCodes[coverageIndex];
+
+              // Calculate units to deduct (don't go below 0)
+              const unitsToDeduct = Math.min(unitsUsed, coverage.unitsAllowed);
+
+              if (unitsToDeduct > 0) {
+                // Deduct units from coverage
+                patient.insurances[insuranceIndex].coveredCodes[coverageIndex].unitsAllowed -= unitsToDeduct;
+
+                // Track coverage usage
+                coverageUsed.push({
+                  insuranceName: insurance.insuranceName,
+                  cptCode: cptCode,
+                  description: coverage.description,
+                  unitsUsed: unitsToDeduct,
+                  unitsRemaining: patient.insurances[insuranceIndex].coveredCodes[coverageIndex].unitsAllowed,
+                  unitRate: coverage.unitRate,
+                  copayPerUnit: coverage.copayPerUnit
+                });
+
+                patientUpdated = true;
+
+                console.log(`✅ Insurance coverage used: ${insurance.insuranceName} - ${cptCode} - ${unitsToDeduct} units (${patient.insurances[insuranceIndex].coveredCodes[coverageIndex].unitsAllowed} remaining)`);
+              }
+            }
+          }
+        });
+      });
+
+      // Save patient if coverage was updated
+      if (patientUpdated) {
+        await patient.save();
+      }
+    }
+
     await appointment.save();
 
     // Create ledger entry
@@ -901,6 +956,8 @@ router.post('/:id/checkout', async (req, res) => {
           (patient.packages.find(pkg => pkg._id.toString() === packageUsed.packageId)?.remainingVisits || 0) : 0,
         packageValue: packageUsed.packageValue || 0
       } : undefined,
+      // Add insurance coverage usage tracking
+      coverageUsed: coverageUsed.length > 0 ? coverageUsed : undefined,
       nextAppointment: nextAppointment ? {
         scheduledDate: nextAppointment.date,
         scheduledTime: nextAppointment.time,
@@ -983,6 +1040,35 @@ router.post('/:id/checkout', async (req, res) => {
             isVisible: true,
             createdBy: checkedOutBy,
             createdAt: new Date()
+          });
+        }
+      });
+    }
+
+    // Check insurance coverage exhaustion
+    if (patient.insurances && patient.insurances.length > 0) {
+      patient.insurances.forEach(insurance => {
+        if (insurance.coveredCodes && insurance.coveredCodes.length > 0) {
+          insurance.coveredCodes.forEach(coverage => {
+            if (coverage.unitsAllowed === 0) {
+              alertsToAdd.push({
+                type: 'Coverage Exhausted',
+                message: `Insurance coverage for ${coverage.cptCode} (${coverage.description}) has been exhausted`,
+                priority: 'High',
+                isVisible: true,
+                createdBy: checkedOutBy,
+                createdAt: new Date()
+              });
+            } else if (coverage.unitsAllowed <= 2 && coverage.unitsAllowed > 0) {
+              alertsToAdd.push({
+                type: 'Coverage Low',
+                message: `Insurance coverage for ${coverage.cptCode} (${coverage.description}) has only ${coverage.unitsAllowed} units remaining`,
+                priority: 'Medium',
+                isVisible: true,
+                createdBy: checkedOutBy,
+                createdAt: new Date()
+              });
+            }
           });
         }
       });

@@ -58,7 +58,7 @@ const InsuranceCoverageCard = ({ patient, selectedCodes = [] }) => {
       return { type: 'unknown', message: 'Coverage unknown', icon: ExclamationTriangleIcon, color: 'text-yellow-400' };
     }
 
-    const coverage = insurance.coveredCodes.find(code => 
+    const coverage = insurance.coveredCodes.find(code =>
       code.cptCode.toUpperCase() === cptCode.toUpperCase()
     );
 
@@ -66,9 +66,14 @@ const InsuranceCoverageCard = ({ patient, selectedCodes = [] }) => {
       return { type: 'not-covered', message: 'Not covered', icon: XCircleIcon, color: 'text-red-400' };
     }
 
-    // Check if units would be exceeded (this would need visit history data)
-    // For now, just show as covered
-    return { type: 'covered', message: 'Covered', icon: CheckCircleIcon, color: 'text-green-400' };
+    // Check remaining units
+    if (coverage.unitsAllowed === 0) {
+      return { type: 'exhausted', message: 'Coverage exhausted', icon: XCircleIcon, color: 'text-red-400' };
+    } else if (coverage.unitsAllowed <= 2) {
+      return { type: 'low', message: `${coverage.unitsAllowed} units left`, icon: ExclamationTriangleIcon, color: 'text-yellow-400' };
+    }
+
+    return { type: 'covered', message: `${coverage.unitsAllowed} units available`, icon: CheckCircleIcon, color: 'text-green-400' };
   };
 
   return (
@@ -147,16 +152,25 @@ const InsuranceCoverageCard = ({ patient, selectedCodes = [] }) => {
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-gray-600">
-                            {insurance.coveredCodes.map((code, codeIndex) => (
-                              <tr key={codeIndex} className="text-gray-300">
-                                <td className="py-2 font-mono">{code.cptCode}</td>
-                                <td className="py-2 text-sm">{code.description}</td>
-                                <td className="py-2 text-right">{code.unitsAllowed}</td>
-                                <td className="py-2 text-right">${code.unitRate.toFixed(2)}</td>
-                                <td className="py-2 text-right font-medium">${code.totalAllowed.toFixed(2)}</td>
-                                <td className="py-2 text-right">${code.copayPerUnit.toFixed(2)}</td>
-                              </tr>
-                            ))}
+                            {insurance.coveredCodes.map((code, codeIndex) => {
+                              const isExhausted = code.unitsAllowed === 0;
+                              const isLow = code.unitsAllowed <= 2 && code.unitsAllowed > 0;
+
+                              return (
+                                <tr key={codeIndex} className={`text-gray-300 ${isExhausted ? 'bg-red-900/20' : isLow ? 'bg-yellow-900/20' : ''}`}>
+                                  <td className="py-2 font-mono">{code.cptCode}</td>
+                                  <td className="py-2 text-sm">{code.description}</td>
+                                  <td className={`py-2 text-right ${isExhausted ? 'text-red-400 font-bold' : isLow ? 'text-yellow-400 font-bold' : ''}`}>
+                                    {code.unitsAllowed}
+                                    {isExhausted && <span className="ml-1 text-xs">(EXHAUSTED)</span>}
+                                    {isLow && <span className="ml-1 text-xs">(LOW)</span>}
+                                  </td>
+                                  <td className="py-2 text-right">${code.unitRate.toFixed(2)}</td>
+                                  <td className="py-2 text-right font-medium">${code.totalAllowed.toFixed(2)}</td>
+                                  <td className="py-2 text-right">${code.copayPerUnit.toFixed(2)}</td>
+                                </tr>
+                              );
+                            })}
                           </tbody>
                         </table>
                       </div>
@@ -207,6 +221,36 @@ const InsuranceCoverageCard = ({ patient, selectedCodes = [] }) => {
           </div>
           <p className="text-sm text-red-300 mt-1">
             One or more insurance plans have expired. Verify coverage before treatment.
+          </p>
+        </div>
+      )}
+
+      {/* Coverage Exhaustion Alerts */}
+      {patient.insurances.some(ins =>
+        ins.coveredCodes && ins.coveredCodes.some(code => code.unitsAllowed === 0)
+      ) && (
+        <div className="mt-3 p-3 bg-red-900/20 border border-red-600 rounded-lg">
+          <div className="flex items-center text-red-400">
+            <XCircleIcon className="h-4 w-4 mr-2" />
+            <span className="text-sm font-medium">Coverage Exhausted</span>
+          </div>
+          <p className="text-sm text-red-300 mt-1">
+            Some procedure codes have exhausted their coverage limits. Review before billing.
+          </p>
+        </div>
+      )}
+
+      {/* Low Coverage Alerts */}
+      {patient.insurances.some(ins =>
+        ins.coveredCodes && ins.coveredCodes.some(code => code.unitsAllowed <= 2 && code.unitsAllowed > 0)
+      ) && (
+        <div className="mt-3 p-3 bg-yellow-900/20 border border-yellow-600 rounded-lg">
+          <div className="flex items-center text-yellow-400">
+            <ExclamationTriangleIcon className="h-4 w-4 mr-2" />
+            <span className="text-sm font-medium">Low Coverage Warning</span>
+          </div>
+          <p className="text-sm text-yellow-300 mt-1">
+            Some procedure codes have low remaining coverage units. Plan accordingly.
           </p>
         </div>
       )}
