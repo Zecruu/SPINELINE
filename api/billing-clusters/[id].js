@@ -6,20 +6,37 @@ const jwt = require('jsonwebtoken');
 let isConnected = false;
 
 const connectDB = async () => {
-  if (isConnected) {
+  if (isConnected && mongoose.connection.readyState === 1) {
     return;
   }
 
   try {
-    const conn = await mongoose.connect(process.env.MONGODB_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
+    mongoose.set('strictQuery', false);
+    mongoose.set('bufferCommands', false);
+
+    const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI;
+
+    if (!mongoUri) {
+      throw new Error('MongoDB URI not found in environment variables');
+    }
+
+    const conn = await mongoose.connect(mongoUri, {
+      serverSelectionTimeoutMS: 30000,
+      socketTimeoutMS: 45000,
+      bufferCommands: false,
+      maxPoolSize: 10,
+      minPoolSize: 1,
+      maxIdleTimeMS: 30000,
+      heartbeatFrequencyMS: 10000,
+      connectTimeoutMS: 30000,
+      family: 4
     });
 
     isConnected = conn.connections[0].readyState === 1;
-    console.log('MongoDB connected for billing cluster operations');
+    console.log('✅ MongoDB connected for billing cluster operations');
   } catch (error) {
-    console.error('MongoDB connection error:', error);
+    console.error('❌ MongoDB connection error:', error);
+    isConnected = false;
     throw error;
   }
 };
@@ -63,7 +80,7 @@ const billingClusterSchema = new mongoose.Schema({
     type: {
       type: String,
       enum: ['CPT', 'HCPCS'],
-      required: true
+      default: 'CPT'
     },
     unitRate: {
       type: Number,
@@ -123,7 +140,12 @@ const verifyToken = (req) => {
   }
 
   const token = authHeader.substring(7);
-  const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret');
+
+  if (!process.env.JWT_SECRET) {
+    throw new Error('JWT_SECRET not configured');
+  }
+
+  const decoded = jwt.verify(token, process.env.JWT_SECRET);
   return decoded;
 };
 
@@ -145,10 +167,10 @@ export default async function handler(req, res) {
     await connectDB();
 
     const { id } = req.query;
-    const { clinicId, role } = user;
+    const { clinicId, role, name, userId } = user;
 
-    // Only doctors can access clusters
-    if (role !== 'doctor') {
+    // Only doctors can access clusters (if role is available)
+    if (role && role !== 'doctor') {
       return res.status(403).json({
         success: false,
         message: 'Access denied. Doctor role required.'
@@ -210,7 +232,7 @@ export default async function handler(req, res) {
           description,
           tags: tags || [],
           codes,
-          updatedBy: user.name || user.email,
+          updatedBy: userId || name || user.email || 'Unknown',
           updatedAt: new Date()
         },
         { new: true }
@@ -257,7 +279,7 @@ export default async function handler(req, res) {
         { _id: id, clinicId },
         { 
           isActive: false,
-          updatedBy: user.name || user.email,
+          updatedBy: userId || name || user.email || 'Unknown',
           updatedAt: new Date()
         }
       );
