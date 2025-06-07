@@ -79,6 +79,20 @@ export default async function handler(req, res) {
     // Use MongoDB native aggregation through mongoose connection
     const db = mongoose.connection.db;
 
+    console.log(`🔍 VERCEL TODAY ENDPOINT: Getting appointments for clinic: ${clinicId}`);
+    console.log(`📅 Today: ${today.toISOString().split('T')[0]}`);
+    console.log(`📅 Start of day: ${startOfDay.toISOString()}`);
+    console.log(`📅 End of day: ${endOfDay.toISOString()}`);
+
+    // First, let's see ALL appointments for this clinic
+    const allAppointments = await db.collection('appointments').find({ clinicId }).toArray();
+    console.log(`🔍 TOTAL appointments in clinic ${clinicId}: ${allAppointments.length}`);
+    allAppointments.forEach(apt => {
+      const aptDate = new Date(apt.appointmentDate);
+      const aptDateString = aptDate.toISOString().split('T')[0];
+      console.log(`  - Appointment: ${aptDateString} at ${apt.appointmentTime} (Status: ${apt.status}) - Patient ID: ${apt.patientId}`);
+    });
+
     // Get appointments with patient data
     const appointments = await db.collection('appointments').aggregate([
       {
@@ -116,6 +130,11 @@ export default async function handler(req, res) {
         $sort: { appointmentTime: 1 }
       }
     ]).toArray();
+
+    console.log(`🔍 QUERY RESULT: Found ${appointments.length} appointments for today`);
+    appointments.forEach(apt => {
+      console.log(`  - Result: ${apt.patient?.firstName} ${apt.patient?.lastName} at ${apt.appointmentTime} (${apt.status})`);
+    });
 
     res.json({
       success: true,
