@@ -992,7 +992,7 @@ router.post('/:id/checkout', async (req, res) => {
     }
 
     // Check for alerts to trigger
-    const patient = appointment.patientId;
+    // patient is already declared above at line 833
     const alertsToAdd = [];
 
     // Check insurance expiration
