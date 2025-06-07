@@ -289,9 +289,41 @@ const PatientFlow = () => {
             setDoctorNotes(patientResponse.data.patient.doctorNotes || '');
           } else {
             console.error('❌ PATIENT FLOW: Failed to load patient data:', patientResponse.data);
+            // Create a fallback patient object with the patientId
+            const fallbackPatient = {
+              _id: patientId,
+              firstName: 'Unknown',
+              lastName: 'Patient',
+              fullName: 'Unknown Patient',
+              recordNumber: 'N/A',
+              phone: 'N/A',
+              email: 'N/A',
+              dateOfBirth: null,
+              gender: 'Not specified',
+              notes: '',
+              doctorNotes: ''
+            };
+            console.log('🔄 PATIENT FLOW: Using fallback patient data');
+            setPatient(fallbackPatient);
           }
         } else {
           console.error('❌ PATIENT FLOW: No patient data or patientId found in appointment');
+          // Create a fallback patient object
+          const fallbackPatient = {
+            _id: 'unknown',
+            firstName: 'Unknown',
+            lastName: 'Patient',
+            fullName: 'Unknown Patient',
+            recordNumber: 'N/A',
+            phone: 'N/A',
+            email: 'N/A',
+            dateOfBirth: null,
+            gender: 'Not specified',
+            notes: '',
+            doctorNotes: ''
+          };
+          console.log('🔄 PATIENT FLOW: Using fallback patient data (no patientId)');
+          setPatient(fallbackPatient);
         }
 
         // Update appointment status to "In Progress" if it's "Checked-In"
@@ -310,6 +342,22 @@ const PatientFlow = () => {
       }
     } catch (error) {
       console.error('Error loading appointment data:', error);
+      // Create a fallback patient object even on error
+      const fallbackPatient = {
+        _id: 'error',
+        firstName: 'Error',
+        lastName: 'Loading Patient',
+        fullName: 'Error Loading Patient',
+        recordNumber: 'N/A',
+        phone: 'N/A',
+        email: 'N/A',
+        dateOfBirth: null,
+        gender: 'Not specified',
+        notes: '',
+        doctorNotes: ''
+      };
+      console.log('🔄 PATIENT FLOW: Using fallback patient data (error occurred)');
+      setPatient(fallbackPatient);
     } finally {
       setLoading(false);
     }
