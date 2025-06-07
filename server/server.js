@@ -68,6 +68,7 @@ app.use('/api/reports', require('./routes/reports'));
 app.use('/api/ledger', require('./routes/ledger'));
 app.use('/api/import-export', require('./routes/importExport'));
 app.use('/api/dx-clusters', require('./routes/dxClusters'));
+app.use('/api/billing-clusters', require('./routes/billingClusters'));
 app.use('/api/care-kits', require('./routes/careKits'));
 app.use('/api/settings', require('./routes/settings'));
 app.use('/api/doctors', require('./routes/doctors'));

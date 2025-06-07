@@ -212,7 +212,7 @@ const ClusterEditor = ({ cluster, type, onClose, onSave }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] overflow-hidden">
+      <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-6xl h-[90vh] flex flex-col overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-700">
           <h2 className="text-xl font-semibold text-white">
@@ -226,9 +226,9 @@ const ClusterEditor = ({ cluster, type, onClose, onSave }) => {
           </button>
         </div>
 
-        <div className="flex h-[calc(90vh-120px)]">
+        <div className="flex flex-1 overflow-hidden">
           {/* Left Panel - Cluster Details */}
-          <div className="w-1/3 p-6 border-r border-gray-700 overflow-y-auto">
+          <div className="w-1/3 p-6 border-r border-gray-700 overflow-y-auto flex-shrink-0">
             <div className="space-y-4">
               {/* Cluster Name */}
               <div>
@@ -300,7 +300,7 @@ const ClusterEditor = ({ cluster, type, onClose, onSave }) => {
           </div>
 
           {/* Right Panel - Code Selection */}
-          <div className="flex-1 p-6 overflow-y-auto">
+          <div className="flex-1 p-6 overflow-hidden flex flex-col">
             {/* Search */}
             <div className="mb-4">
               <div className="relative">
@@ -329,7 +329,7 @@ const ClusterEditor = ({ cluster, type, onClose, onSave }) => {
             )}
 
             {/* Available Codes Table */}
-            <div className="border border-gray-700 rounded-lg overflow-hidden">
+            <div className="border border-gray-700 rounded-lg overflow-hidden flex-1 flex flex-col">
               {/* Table Header */}
               <div className="bg-gray-700 border-b border-gray-600">
                 <div className="grid grid-cols-12 gap-2 px-4 py-3 text-sm font-medium text-gray-300">
@@ -342,7 +342,7 @@ const ClusterEditor = ({ cluster, type, onClose, onSave }) => {
               </div>
 
               {/* Table Body */}
-              <div className="max-h-96 overflow-y-auto">
+              <div className="flex-1 overflow-y-auto">
                 {loadingCodes ? (
                   <div className="p-8 text-center text-gray-400">Loading codes...</div>
                 ) : availableCodes.length === 0 ? (

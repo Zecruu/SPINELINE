@@ -409,6 +409,7 @@ app.use('/api/reports', require('../server/routes/reports'));
 app.use('/api/ledger', require('../server/routes/ledger'));
 app.use('/api/import-export', require('../server/routes/importExport'));
 app.use('/api/dx-clusters', require('../server/routes/dxClusters'));
+app.use('/api/billing-clusters', require('../server/routes/billingClusters'));
 app.use('/api/care-kits', require('../server/routes/careKits'));
 app.use('/api/settings', require('../server/routes/settings'));
 app.use('/api/doctors', require('../server/routes/doctors'));
