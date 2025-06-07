@@ -36,10 +36,10 @@ const DoctorTemplates = () => {
   const navigate = useNavigate();
 
   const tabs = [
-    { id: 'soap', label: '🗒️ SOAP Templates', icon: DocumentTextIcon, count: templates.soap.length },
+    { id: 'soap', label: '🗒️ SOAP Templates', icon: DocumentTextIcon, count: templates.soap?.length || 0 },
     { id: 'billingClusters', label: '💰 Billing Clusters', icon: CurrencyDollarIcon, count: templates.billingClusters?.length || 0 },
     { id: 'diagnosisClusters', label: '🩺 Diagnosis Clusters', icon: ClipboardDocumentCheckIcon, count: templates.diagnosisClusters?.length || 0 },
-    { id: 'alerts', label: '📋 Alert Templates', icon: ExclamationTriangleIcon, count: templates.alerts.length }
+    { id: 'alerts', label: '📋 Alert Templates', icon: ExclamationTriangleIcon, count: templates.alerts?.length || 0 }
   ];
 
   const commonTags = [
@@ -291,7 +291,7 @@ const DoctorTemplates = () => {
             <DocumentTextIcon className="h-12 w-12 text-gray-500 mx-auto mb-4" />
             <p className="text-gray-400">No templates found</p>
             <p className="text-gray-500 text-sm">
-              {templates[activeTab].length === 0
+              {(templates[activeTab]?.length || 0) === 0
                 ? `Create your first ${activeTab} template to get started.`
                 : 'Try adjusting your search or filters.'
               }
