@@ -51,6 +51,89 @@ const commonDiagnosticCodes = [
     chronicity: 'Unspecified'
   },
 
+  // SEGMENTAL AND SOMATIC DYSFUNCTION (M99 codes - Very Important for Chiropractic)
+  {
+    code: 'M99.01',
+    description: 'Segmental and somatic dysfunction of cervical region',
+    category: 'Musculoskeletal',
+    bodySystem: 'Spine',
+    commonlyUsed: true,
+    severity: 'Unspecified',
+    chronicity: 'Unspecified'
+  },
+  {
+    code: 'M99.02',
+    description: 'Segmental and somatic dysfunction of thoracic region',
+    category: 'Musculoskeletal',
+    bodySystem: 'Spine',
+    commonlyUsed: true,
+    severity: 'Unspecified',
+    chronicity: 'Unspecified'
+  },
+  {
+    code: 'M99.03',
+    description: 'Segmental and somatic dysfunction of lumbar region',
+    category: 'Musculoskeletal',
+    bodySystem: 'Spine',
+    commonlyUsed: true,
+    severity: 'Unspecified',
+    chronicity: 'Unspecified'
+  },
+  {
+    code: 'M99.04',
+    description: 'Segmental and somatic dysfunction of sacral region',
+    category: 'Musculoskeletal',
+    bodySystem: 'Spine',
+    commonlyUsed: true,
+    severity: 'Unspecified',
+    chronicity: 'Unspecified'
+  },
+  {
+    code: 'M99.05',
+    description: 'Segmental and somatic dysfunction of pelvic region',
+    category: 'Musculoskeletal',
+    bodySystem: 'Pelvis',
+    commonlyUsed: true,
+    severity: 'Unspecified',
+    chronicity: 'Unspecified'
+  },
+  {
+    code: 'M99.06',
+    description: 'Segmental and somatic dysfunction of lower extremity',
+    category: 'Musculoskeletal',
+    bodySystem: 'Lower Extremity',
+    commonlyUsed: false,
+    severity: 'Unspecified',
+    chronicity: 'Unspecified'
+  },
+  {
+    code: 'M99.07',
+    description: 'Segmental and somatic dysfunction of upper extremity',
+    category: 'Musculoskeletal',
+    bodySystem: 'Upper Extremity',
+    commonlyUsed: false,
+    severity: 'Unspecified',
+    chronicity: 'Unspecified'
+  },
+  {
+    code: 'M99.08',
+    description: 'Segmental and somatic dysfunction of rib cage',
+    category: 'Musculoskeletal',
+    bodySystem: 'Thorax',
+    commonlyUsed: false,
+    severity: 'Unspecified',
+    chronicity: 'Unspecified'
+  },
+  {
+    code: 'M99.09',
+    description: 'Segmental and somatic dysfunction of abdomen and other regions',
+    category: 'Musculoskeletal',
+    bodySystem: 'Abdomen',
+    commonlyUsed: false,
+    severity: 'Unspecified',
+    chronicity: 'Unspecified'
+  },
+
   // MUSCULOSKELETAL - CERVICAL SPINE
   {
     code: 'M50.30',
