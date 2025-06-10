@@ -5,7 +5,17 @@ const csv = require('csv-parser');
 const XLSX = require('xlsx');
 const fs = require('fs');
 const path = require('path');
-const yauzl = require('yauzl');
+
+// Check if yauzl is available
+let yauzl;
+try {
+  yauzl = require('yauzl');
+  console.log('✅ yauzl module loaded successfully');
+} catch (error) {
+  console.error('❌ Failed to load yauzl module:', error.message);
+  console.error('❌ ZIP file processing will not be available');
+}
+
 const { verifyToken } = require('../middleware/auth');
 const Patient = require('../models/Patient');
 const Appointment = require('../models/Appointment');
@@ -83,7 +93,7 @@ const extractZipFile = (zipPath, extractPath) => {
     console.log(`🔄 Opening ZIP file: ${zipPath}`);
 
     if (!yauzl) {
-      return reject(new Error('yauzl module not available'));
+      return reject(new Error('ZIP processing not available - yauzl module not loaded'));
     }
 
     yauzl.open(zipPath, { lazyEntries: true }, (err, zipfile) => {
@@ -647,6 +657,39 @@ router.get('/template/:type', verifyToken, async (req, res) => {
         }];
         filename = 'soap-notes-import-template';
         break;
+      case 'chirotouch-full':
+        // For ChiroTouch, return a ZIP file structure guide instead of CSV
+        const guideContent = `ChiroTouch Export Structure Guide
+
+This import type expects a ZIP file with the following folder structure:
+
+📁 ChiroTouch Export.zip
+├── 📁 00_Tables/
+│   ├── 📄 Patients.csv (Patient demographics and information)
+│   ├── 📄 Appointments.csv (Appointment schedules)
+│   └── 📄 Other table files...
+├── 📁 01_LedgerHistory/
+│   └── 📄 Ledger files (Billing and payment records)
+├── 📁 02_ScannedDocs/
+│   └── 📄 PDF files (Scanned documents)
+└── 📁 03_ChartNotes/
+    └── 📄 PDF files (Chart notes and clinical documents)
+
+Instructions:
+1. Export your data from ChiroTouch using their export function
+2. Ensure the ZIP file contains the above folder structure
+3. Upload the entire ZIP file using the drag-and-drop area
+4. The system will automatically detect and process all data types
+
+Supported file types in ZIP:
+- CSV files for patient and appointment data
+- PDF files for documents and chart notes
+
+Maximum file size: 250MB`;
+
+        res.setHeader('Content-Type', 'text/plain');
+        res.setHeader('Content-Disposition', 'attachment; filename="ChiroTouch-Import-Guide.txt"');
+        return res.send(guideContent);
       default:
         return res.status(400).json({ message: 'Invalid template type' });
     }
@@ -664,7 +707,19 @@ router.get('/template/:type', verifyToken, async (req, res) => {
 });
 
 // Upload and process import file
-router.post('/upload', verifyToken, upload.single('importFile'), async (req, res) => {
+router.post('/upload', verifyToken, (req, res, next) => {
+  // Handle multer errors
+  upload.single('importFile')(req, res, (err) => {
+    if (err) {
+      console.error('❌ Multer error:', err);
+      return res.status(400).json({
+        message: 'File upload error',
+        error: err.message
+      });
+    }
+    next();
+  });
+}, async (req, res) => {
   try {
     const { type } = req.body;
     const { clinicId, userId } = req.user;

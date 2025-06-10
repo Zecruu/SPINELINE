@@ -152,15 +152,9 @@ const ImportExport = () => {
     if (files.length > 0) {
       const file = files[0];
 
-      console.log('Drop - Current importType:', importType);
-      console.log('Drop - File name:', file.name);
-
       // Validate file type
       const allowedTypes = importType === 'chirotouch-full' ? ['.zip'] : ['.csv', '.xlsx', '.xls'];
       const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
-
-      console.log('Drop - Allowed types:', allowedTypes);
-      console.log('Drop - File extension:', fileExtension);
 
       if (!allowedTypes.includes(fileExtension)) {
         setError(`Invalid file type. ${importType === 'chirotouch-full' ? 'Only ZIP files are allowed.' : 'Only CSV and Excel files are allowed.'}`);
