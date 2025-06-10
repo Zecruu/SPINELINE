@@ -51,6 +51,9 @@ const ImportExport = () => {
     scannedDocs: true
   });
 
+  // Drag and drop states
+  const [isDragOver, setIsDragOver] = useState(false);
+
   useEffect(() => {
     const userData = localStorage.getItem('user');
     if (userData) {
@@ -127,54 +130,102 @@ const ImportExport = () => {
     }
   };
 
+  // Drag and drop handlers
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      const file = files[0];
+
+      // Validate file type
+      const allowedTypes = importType === 'chirotouch-full' ? ['.zip'] : ['.csv', '.xlsx', '.xls'];
+      const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
+
+      if (!allowedTypes.includes(fileExtension)) {
+        setError(`Invalid file type. ${importType === 'chirotouch-full' ? 'Only ZIP files are allowed.' : 'Only CSV and Excel files are allowed.'}`);
+        return;
+      }
+
+      // Validate file size (250MB for ChiroTouch, 10MB for others)
+      const maxSize = importType === 'chirotouch-full' ? 250 * 1024 * 1024 : 10 * 1024 * 1024;
+      if (file.size > maxSize) {
+        setError(`File too large. Maximum size is ${importType === 'chirotouch-full' ? '250MB' : '10MB'}.`);
+        return;
+      }
+
+      processFile(file);
+    }
+  };
+
+  const processFile = async (file) => {
+    setSelectedFile(file);
+    setLoading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const formData = new FormData();
+      formData.append('importFile', file);
+      formData.append('type', importType);
+
+      const token = localStorage.getItem('userToken');
+      const response = await fetch('/api/import-export/upload', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || 'File upload failed');
+      }
+
+      setImportPreview(result);
+
+      // Handle ChiroTouch imports differently
+      if (result.isChirotouch) {
+        setIsChirotouch(true);
+        setChirotouchStructure(result.structure);
+        setImportStep(2); // Go to ChiroTouch review step
+        setSuccess(`ChiroTouch export uploaded successfully. Found ${result.preview.summary.totalPatients} patients, ${result.preview.summary.totalAppointments} appointments, and ${result.preview.summary.totalLedgerRecords} ledger records.`);
+      } else {
+        setIsChirotouch(false);
+        setImportStep(2); // Go to column mapping step
+        setSuccess(`File uploaded successfully. Found ${result.totalRows} rows.`);
+      }
+
+    } catch (error) {
+      console.error('File upload error:', error);
+      setError(error.message || 'Failed to upload file');
+      setSelectedFile(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleFileUpload = async (event) => {
     const file = event.target.files[0];
-    if (file) {
-      setSelectedFile(file);
-      setLoading(true);
-      setError('');
+    if (!file) return;
 
-      try {
-        const formData = new FormData();
-        formData.append('importFile', file);
-        formData.append('type', importType);
-
-        const token = localStorage.getItem('userToken');
-        const response = await fetch('/api/import-export/upload', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          },
-          body: formData
-        });
-
-        const result = await response.json();
-
-        if (!response.ok) {
-          throw new Error(result.message || 'File upload failed');
-        }
-
-        setImportPreview(result);
-
-        // Handle ChiroTouch imports differently
-        if (result.isChirotouch) {
-          setIsChirotouch(true);
-          setChirotouchStructure(result.structure);
-          setImportStep(2); // Go to ChiroTouch review step
-          setSuccess(`ChiroTouch export uploaded successfully. Found ${result.preview.summary.totalPatients} patients, ${result.preview.summary.totalAppointments} appointments, and ${result.preview.summary.totalLedgerRecords} ledger records.`);
-        } else {
-          setIsChirotouch(false);
-          setImportStep(2); // Go to column mapping step
-          setSuccess(`File uploaded successfully. Found ${result.totalRows} rows.`);
-        }
-      } catch (error) {
-        console.error('File upload error:', error);
-        setError(error.message || 'Failed to upload file');
-        setSelectedFile(null);
-      } finally {
-        setLoading(false);
-      }
-    }
+    processFile(file);
   };
 
   const downloadTemplate = async (type) => {
@@ -261,6 +312,7 @@ const ImportExport = () => {
     setSuccess('');
     setIsChirotouch(false);
     setChirotouchStructure(null);
+    setIsDragOver(false);
     setSelectedDatasets({
       patients: true,
       appointments: true,
@@ -541,8 +593,17 @@ const ImportExport = () => {
                 {/* File Upload */}
                 <div className="bg-gray-700/30 rounded-lg p-6">
                   <h4 className="text-sm font-medium text-white mb-4">Upload File</h4>
-                  <div className="border-2 border-dashed border-gray-600 rounded-lg p-8 text-center">
-                    <CloudArrowUpIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <div
+                    className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+                      isDragOver
+                        ? 'border-blue-500 bg-blue-900/20'
+                        : 'border-gray-600 hover:border-gray-500'
+                    }`}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                  >
+                    <CloudArrowUpIcon className={`h-12 w-12 mx-auto mb-4 ${isDragOver ? 'text-blue-400' : 'text-gray-400'}`} />
                     <div className="text-sm text-gray-300 mb-2">
                       <label htmlFor="file-upload" className="cursor-pointer text-blue-400 hover:text-blue-300">
                         Click to upload
