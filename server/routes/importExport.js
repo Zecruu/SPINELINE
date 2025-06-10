@@ -761,7 +761,7 @@ router.post('/upload', verifyToken, (req, res) => {
     body: req.body,
     hasFile: !!req.file,
     yauzlAvailable: !!yauzl,
-    version: '3.1.0'
+    version: '3.2.0'
   });
 });
 
