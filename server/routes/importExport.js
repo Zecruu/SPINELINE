@@ -80,8 +80,17 @@ const extractZipFile = (zipPath, extractPath) => {
   return new Promise((resolve, reject) => {
     const extractedFiles = [];
 
+    console.log(`🔄 Opening ZIP file: ${zipPath}`);
+
+    if (!yauzl) {
+      return reject(new Error('yauzl module not available'));
+    }
+
     yauzl.open(zipPath, { lazyEntries: true }, (err, zipfile) => {
-      if (err) return reject(err);
+      if (err) {
+        console.error('❌ Failed to open ZIP file:', err);
+        return reject(err);
+      }
 
       zipfile.readEntry();
       zipfile.on('entry', (entry) => {
@@ -660,14 +669,19 @@ router.post('/upload', verifyToken, upload.single('importFile'), async (req, res
     const { type } = req.body;
     const { clinicId, userId } = req.user;
 
+    console.log(`📤 Upload request received: type=${type}, clinic=${clinicId}`);
+
     if (!req.file) {
+      console.error('❌ No file uploaded');
       return res.status(400).json({ message: 'No file uploaded' });
     }
 
-    console.log(`📤 Processing import file: ${req.file.originalname}, type: ${type}`);
+    console.log(`📤 Processing import file: ${req.file.originalname}, type: ${type}, size: ${req.file.size} bytes`);
 
     const filePath = req.file.path;
     const fileExtension = path.extname(req.file.originalname).toLowerCase();
+
+    console.log(`📁 File path: ${filePath}, extension: ${fileExtension}`);
 
     let data = [];
 
@@ -729,13 +743,27 @@ router.post('/upload', verifyToken, upload.single('importFile'), async (req, res
       console.log('🗜️ Processing ChiroTouch ZIP export...');
 
       const extractPath = path.join(path.dirname(filePath), `extracted_${Date.now()}`);
-      fs.mkdirSync(extractPath, { recursive: true });
+      console.log(`📁 Creating extract directory: ${extractPath}`);
 
       try {
+        fs.mkdirSync(extractPath, { recursive: true });
+        console.log('✅ Extract directory created successfully');
+      } catch (dirError) {
+        console.error('❌ Failed to create extract directory:', dirError);
+        throw new Error(`Failed to create extraction directory: ${dirError.message}`);
+      }
+
+      try {
+        console.log('🔄 Starting ZIP extraction...');
         const extractedFiles = await extractZipFile(filePath, extractPath);
+        console.log(`✅ ZIP extracted successfully. Found ${extractedFiles.length} files`);
+
+        console.log('🔍 Detecting ChiroTouch structure...');
         const structure = detectChirotouchStructure(extractedFiles);
+        console.log('📊 Structure detection result:', JSON.stringify(structure, null, 2));
 
         if (!structure.isChirotouch) {
+          console.log('❌ Invalid ChiroTouch structure detected');
           // Clean up
           fs.unlinkSync(filePath);
           fs.rmSync(extractPath, { recursive: true, force: true });
@@ -744,8 +772,10 @@ router.post('/upload', verifyToken, upload.single('importFile'), async (req, res
           });
         }
 
+        console.log('🔄 Processing ChiroTouch preview...');
         // Process and preview the data
         const preview = await processChirotouchPreview(structure, extractPath);
+        console.log('✅ Preview processed successfully');
 
         res.json({
           success: true,
@@ -757,18 +787,35 @@ router.post('/upload', verifyToken, upload.single('importFile'), async (req, res
         });
 
       } catch (error) {
+        console.error('❌ ZIP processing error:', error);
         // Clean up on error
-        fs.unlinkSync(filePath);
-        if (fs.existsSync(extractPath)) {
-          fs.rmSync(extractPath, { recursive: true, force: true });
+        try {
+          if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+          }
+          if (fs.existsSync(extractPath)) {
+            fs.rmSync(extractPath, { recursive: true, force: true });
+          }
+        } catch (cleanupError) {
+          console.error('❌ Cleanup error:', cleanupError);
         }
         throw error;
       }
+    } else {
+      console.log(`❌ Unsupported file extension: ${fileExtension}`);
+      return res.status(400).json({ message: `Unsupported file type: ${fileExtension}` });
     }
 
   } catch (error) {
-    console.error('File upload error:', error);
-    res.status(500).json({ message: 'Failed to process uploaded file' });
+    console.error('❌ File upload error:', error);
+    console.error('❌ Error stack:', error.stack);
+
+    // Ensure we always return JSON
+    res.status(500).json({
+      message: 'Failed to process uploaded file',
+      error: error.message,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 

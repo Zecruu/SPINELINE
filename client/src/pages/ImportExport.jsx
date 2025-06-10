@@ -152,9 +152,15 @@ const ImportExport = () => {
     if (files.length > 0) {
       const file = files[0];
 
+      console.log('Drop - Current importType:', importType);
+      console.log('Drop - File name:', file.name);
+
       // Validate file type
       const allowedTypes = importType === 'chirotouch-full' ? ['.zip'] : ['.csv', '.xlsx', '.xls'];
       const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
+
+      console.log('Drop - Allowed types:', allowedTypes);
+      console.log('Drop - File extension:', fileExtension);
 
       if (!allowedTypes.includes(fileExtension)) {
         setError(`Invalid file type. ${importType === 'chirotouch-full' ? 'Only ZIP files are allowed.' : 'Only CSV and Excel files are allowed.'}`);
@@ -563,7 +569,10 @@ const ImportExport = () => {
                             ? 'border-blue-500 bg-blue-900/20'
                             : 'border-gray-600 bg-gray-700/50 hover:border-gray-500'
                         }`}
-                        onClick={() => setImportType(type.value)}
+                        onClick={() => {
+                          console.log('Setting importType to:', type.value);
+                          setImportType(type.value);
+                        }}
                       >
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
