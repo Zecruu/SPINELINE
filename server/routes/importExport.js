@@ -20,24 +20,9 @@ console.log('🔄 ImportExport route module loading...');
 
 const { verifyToken } = require('../middleware/auth');
 
-// Middleware to ensure all responses are JSON
+// Simple logging middleware
 router.use((req, res, next) => {
-  // Override res.send to always send JSON
-  const originalSend = res.send;
-  res.send = function(data) {
-    if (typeof data === 'string' && data.includes('<html>')) {
-      // If we're trying to send HTML, convert to JSON error
-      return originalSend.call(this, JSON.stringify({
-        message: 'Server error occurred',
-        error: 'HTML response intercepted and converted to JSON',
-        timestamp: new Date().toISOString()
-      }));
-    }
-    return originalSend.call(this, data);
-  };
-
-  // Set JSON content type by default
-  res.setHeader('Content-Type', 'application/json');
+  console.log(`🔄 Import/Export route hit: ${req.method} ${req.path}`);
   next();
 });
 
@@ -57,7 +42,7 @@ router.get('/test', (req, res) => {
     timestamp: new Date().toISOString(),
     yauzlAvailable: !!yauzl,
     yauzlTest: yauzlTest,
-    version: '3.0.0',
+    version: '3.1.0',
     nodeVersion: process.version,
     platform: process.platform
   });
@@ -752,24 +737,33 @@ Maximum file size: 250MB`;
   }
 });
 
-// Upload and process import file
-router.post('/upload', verifyToken, (req, res, next) => {
-  console.log('🔄 Upload endpoint hit');
-
-  // Handle multer errors
-  upload.single('importFile')(req, res, (err) => {
-    if (err) {
-      console.error('❌ Multer error:', err);
-      return res.status(400).json({
-        message: 'File upload error',
-        error: err.message
-      });
-    }
-    console.log('✅ Multer processing completed');
-    next();
+// Simple test upload endpoint
+router.post('/upload-test', verifyToken, (req, res) => {
+  console.log('🔄 Test upload endpoint hit');
+  res.json({
+    message: 'Test upload endpoint working',
+    timestamp: new Date().toISOString(),
+    body: req.body,
+    files: req.files ? 'files present' : 'no files'
   });
-}, async (req, res) => {
-  console.log('🔄 Starting upload processing...');
+});
+
+// Upload and process import file
+router.post('/upload', verifyToken, (req, res) => {
+  console.log('🔄 Upload endpoint hit - simplified version');
+
+  // Always return JSON success for now
+  res.json({
+    message: 'Upload endpoint working - simplified test',
+    timestamp: new Date().toISOString(),
+    method: req.method,
+    path: req.path,
+    body: req.body,
+    hasFile: !!req.file,
+    yauzlAvailable: !!yauzl,
+    version: '3.1.0'
+  });
+});
   try {
     const { type } = req.body;
     const { clinicId, userId } = req.user;
