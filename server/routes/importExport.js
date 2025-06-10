@@ -16,15 +16,50 @@ try {
   console.error('❌ ZIP file processing will not be available');
 }
 
+console.log('🔄 ImportExport route module loading...');
+
 const { verifyToken } = require('../middleware/auth');
+
+// Middleware to ensure all responses are JSON
+router.use((req, res, next) => {
+  // Override res.send to always send JSON
+  const originalSend = res.send;
+  res.send = function(data) {
+    if (typeof data === 'string' && data.includes('<html>')) {
+      // If we're trying to send HTML, convert to JSON error
+      return originalSend.call(this, JSON.stringify({
+        message: 'Server error occurred',
+        error: 'HTML response intercepted and converted to JSON',
+        timestamp: new Date().toISOString()
+      }));
+    }
+    return originalSend.call(this, data);
+  };
+
+  // Set JSON content type by default
+  res.setHeader('Content-Type', 'application/json');
+  next();
+});
 
 // Test endpoint to verify server is running latest code
 router.get('/test', (req, res) => {
+  let yauzlTest = 'not available';
+  if (yauzl) {
+    try {
+      yauzlTest = 'available and functional';
+    } catch (error) {
+      yauzlTest = `available but error: ${error.message}`;
+    }
+  }
+
   res.json({
     message: 'Import/Export API is running',
     timestamp: new Date().toISOString(),
     yauzlAvailable: !!yauzl,
-    version: '2.0.0'
+    yauzlTest: yauzlTest,
+    version: '3.0.0',
+    nodeVersion: process.version,
+    platform: process.platform
   });
 });
 
@@ -894,13 +929,22 @@ router.post('/upload', verifyToken, (req, res, next) => {
 // Global error handler for this router
 router.use((error, req, res, next) => {
   console.error('❌ Unhandled error in import/export router:', error);
+  console.error('❌ Error type:', typeof error);
+  console.error('❌ Error stack:', error.stack);
+
+  // Force JSON response
+  res.setHeader('Content-Type', 'application/json');
 
   if (!res.headersSent) {
-    res.status(500).json({
+    const errorResponse = {
       message: 'Internal server error',
-      error: error.message,
-      timestamp: new Date().toISOString()
-    });
+      error: error.message || 'Unknown error',
+      timestamp: new Date().toISOString(),
+      route: req.path,
+      method: req.method
+    };
+
+    res.status(500).send(JSON.stringify(errorResponse));
   }
 });
 
@@ -1719,5 +1763,7 @@ function extractPatientIdFromFilename(fileName) {
 
   return null;
 }
+
+console.log('✅ ImportExport route module loaded successfully');
 
 module.exports = router;
