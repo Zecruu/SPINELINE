@@ -13,5 +13,6 @@ module.exports = {
   SoapTemplate: require('./SoapTemplate'),
   DxCluster: require('./DxCluster'),
   CareKit: require('./CareKit'),
+  ImportHistory: require('./ImportHistory'),
   // Treatment: require('./Treatment')
 };

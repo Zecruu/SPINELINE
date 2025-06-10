@@ -5,6 +5,7 @@ const csv = require('csv-parser');
 const XLSX = require('xlsx');
 const fs = require('fs');
 const path = require('path');
+const yauzl = require('yauzl');
 const { verifyToken } = require('../middleware/auth');
 const Patient = require('../models/Patient');
 const Appointment = require('../models/Appointment');
@@ -14,6 +15,7 @@ const Checkout = require('../models/Checkout');
 const Ledger = require('../models/Ledger');
 const SoapTemplate = require('../models/SoapTemplate');
 const User = require('../models/User');
+const ImportHistory = require('../models/ImportHistory');
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
@@ -33,15 +35,15 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage: storage,
   limits: {
-    fileSize: 10 * 1024 * 1024 // 10MB limit
+    fileSize: 250 * 1024 * 1024 // 250MB limit for ChiroTouch exports
   },
   fileFilter: (req, file, cb) => {
-    const allowedTypes = ['.csv', '.xlsx', '.xls'];
+    const allowedTypes = ['.csv', '.xlsx', '.xls', '.zip'];
     const ext = path.extname(file.originalname).toLowerCase();
     if (allowedTypes.includes(ext)) {
       cb(null, true);
     } else {
-      cb(new Error('Only CSV and Excel files are allowed'));
+      cb(new Error('Only CSV, Excel, and ZIP files are allowed'));
     }
   }
 });
@@ -71,6 +73,193 @@ const convertToExcel = (data, headers, sheetName = 'Sheet1') => {
   const worksheet = XLSX.utils.json_to_sheet(data, { header: headers });
   XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
   return XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+};
+
+// Helper function to extract zip file
+const extractZipFile = (zipPath, extractPath) => {
+  return new Promise((resolve, reject) => {
+    const extractedFiles = [];
+
+    yauzl.open(zipPath, { lazyEntries: true }, (err, zipfile) => {
+      if (err) return reject(err);
+
+      zipfile.readEntry();
+      zipfile.on('entry', (entry) => {
+        if (/\/$/.test(entry.fileName)) {
+          // Directory entry
+          const dirPath = path.join(extractPath, entry.fileName);
+          fs.mkdirSync(dirPath, { recursive: true });
+          zipfile.readEntry();
+        } else {
+          // File entry
+          zipfile.openReadStream(entry, (err, readStream) => {
+            if (err) return reject(err);
+
+            const filePath = path.join(extractPath, entry.fileName);
+            const dirPath = path.dirname(filePath);
+            fs.mkdirSync(dirPath, { recursive: true });
+
+            const writeStream = fs.createWriteStream(filePath);
+            readStream.pipe(writeStream);
+
+            writeStream.on('close', () => {
+              extractedFiles.push({
+                fileName: entry.fileName,
+                filePath: filePath,
+                size: entry.uncompressedSize
+              });
+              zipfile.readEntry();
+            });
+          });
+        }
+      });
+
+      zipfile.on('end', () => {
+        resolve(extractedFiles);
+      });
+
+      zipfile.on('error', reject);
+    });
+  });
+};
+
+// Helper function to detect ChiroTouch folder structure
+const detectChirotouchStructure = (extractedFiles) => {
+  const structure = {
+    isChirotouch: false,
+    folders: {
+      tables: [],
+      ledgerHistory: [],
+      statements: [],
+      scannedDocs: [],
+      chartNotes: []
+    }
+  };
+
+  // Check for ChiroTouch folder patterns
+  const folderPatterns = {
+    tables: /^00_Tables\//i,
+    ledgerHistory: /^01_LedgerHistory\//i,
+    statements: /^01_Statements\//i,
+    scannedDocs: /^02_ScannedDocs\//i,
+    chartNotes: /^03_ChartNotes\//i
+  };
+
+  extractedFiles.forEach(file => {
+    Object.entries(folderPatterns).forEach(([key, pattern]) => {
+      if (pattern.test(file.fileName)) {
+        structure.folders[key].push(file);
+      }
+    });
+  });
+
+  // Determine if this is a valid ChiroTouch export
+  structure.isChirotouch = structure.folders.tables.length > 0 ||
+                          structure.folders.ledgerHistory.length > 0;
+
+  return structure;
+};
+
+// Helper function to parse CSV file
+const parseCSVFile = (filePath) => {
+  return new Promise((resolve, reject) => {
+    const results = [];
+    fs.createReadStream(filePath)
+      .pipe(csv())
+      .on('data', (row) => results.push(row))
+      .on('end', () => resolve(results))
+      .on('error', reject);
+  });
+};
+
+// Helper function to process ChiroTouch preview
+const processChirotouchPreview = async (structure, extractPath) => {
+  const preview = {
+    patients: { count: 0, sample: [] },
+    appointments: { count: 0, sample: [] },
+    ledger: { count: 0, sample: [] },
+    chartNotes: { count: 0, files: [] },
+    scannedDocs: { count: 0, files: [] },
+    summary: {
+      totalPatients: 0,
+      totalAppointments: 0,
+      totalLedgerRecords: 0,
+      totalChartNotes: 0,
+      totalScannedDocs: 0
+    }
+  };
+
+  try {
+    // Process patients from 00_Tables
+    const patientFiles = structure.folders.tables.filter(f =>
+      f.fileName.toLowerCase().includes('patient') && f.fileName.endsWith('.csv')
+    );
+
+    for (const file of patientFiles) {
+      try {
+        const data = await parseCSVFile(file.filePath);
+        preview.patients.count += data.length;
+        preview.patients.sample = data.slice(0, 5); // First 5 records
+        preview.summary.totalPatients += data.length;
+      } catch (error) {
+        console.warn(`Failed to parse patient file ${file.fileName}:`, error.message);
+      }
+    }
+
+    // Process appointments from 00_Tables
+    const appointmentFiles = structure.folders.tables.filter(f =>
+      f.fileName.toLowerCase().includes('appointment') && f.fileName.endsWith('.csv')
+    );
+
+    for (const file of appointmentFiles) {
+      try {
+        const data = await parseCSVFile(file.filePath);
+        preview.appointments.count += data.length;
+        preview.appointments.sample = data.slice(0, 5);
+        preview.summary.totalAppointments += data.length;
+      } catch (error) {
+        console.warn(`Failed to parse appointment file ${file.fileName}:`, error.message);
+      }
+    }
+
+    // Process ledger from 01_LedgerHistory
+    for (const file of structure.folders.ledgerHistory) {
+      if (file.fileName.endsWith('.csv')) {
+        try {
+          const data = await parseCSVFile(file.filePath);
+          preview.ledger.count += data.length;
+          if (preview.ledger.sample.length < 5) {
+            preview.ledger.sample.push(...data.slice(0, 5 - preview.ledger.sample.length));
+          }
+          preview.summary.totalLedgerRecords += data.length;
+        } catch (error) {
+          console.warn(`Failed to parse ledger file ${file.fileName}:`, error.message);
+        }
+      }
+    }
+
+    // Count chart notes (PDFs/TXT files)
+    preview.chartNotes.count = structure.folders.chartNotes.length;
+    preview.chartNotes.files = structure.folders.chartNotes.slice(0, 10).map(f => ({
+      fileName: path.basename(f.fileName),
+      size: f.size
+    }));
+    preview.summary.totalChartNotes = structure.folders.chartNotes.length;
+
+    // Count scanned docs (PDFs)
+    preview.scannedDocs.count = structure.folders.scannedDocs.length;
+    preview.scannedDocs.files = structure.folders.scannedDocs.slice(0, 10).map(f => ({
+      fileName: path.basename(f.fileName),
+      size: f.size
+    }));
+    preview.summary.totalScannedDocs = structure.folders.scannedDocs.length;
+
+  } catch (error) {
+    console.error('Error processing ChiroTouch preview:', error);
+    throw error;
+  }
+
+  return preview;
 };
 
 // Export data endpoint
@@ -535,6 +724,46 @@ router.post('/upload', verifyToken, upload.single('importFile'), async (req, res
         uploadId: req.file.filename,
         data: data // Store full data for processing
       });
+    } else if (fileExtension === '.zip') {
+      // Handle ChiroTouch ZIP export
+      console.log('🗜️ Processing ChiroTouch ZIP export...');
+
+      const extractPath = path.join(path.dirname(filePath), `extracted_${Date.now()}`);
+      fs.mkdirSync(extractPath, { recursive: true });
+
+      try {
+        const extractedFiles = await extractZipFile(filePath, extractPath);
+        const structure = detectChirotouchStructure(extractedFiles);
+
+        if (!structure.isChirotouch) {
+          // Clean up
+          fs.unlinkSync(filePath);
+          fs.rmSync(extractPath, { recursive: true, force: true });
+          return res.status(400).json({
+            message: 'Invalid ChiroTouch export structure. Expected folders: 00_Tables, 01_LedgerHistory, etc.'
+          });
+        }
+
+        // Process and preview the data
+        const preview = await processChirotouchPreview(structure, extractPath);
+
+        res.json({
+          success: true,
+          isChirotouch: true,
+          structure: structure,
+          preview: preview,
+          uploadId: req.file.filename,
+          extractPath: extractPath // Store for later processing
+        });
+
+      } catch (error) {
+        // Clean up on error
+        fs.unlinkSync(filePath);
+        if (fs.existsSync(extractPath)) {
+          fs.rmSync(extractPath, { recursive: true, force: true });
+        }
+        throw error;
+      }
     }
 
   } catch (error) {
@@ -546,15 +775,82 @@ router.post('/upload', verifyToken, upload.single('importFile'), async (req, res
 // Process import data
 router.post('/process', verifyToken, async (req, res) => {
   try {
-    const { type, data, columnMapping } = req.body;
+    const { type, data, columnMapping, isChirotouch, structure, extractPath, selectedDatasets } = req.body;
     const { clinicId, userId, name: userName } = req.user;
 
-    console.log(`🔄 Processing import: type=${type}, records=${data.length}, clinic=${clinicId}`);
+    console.log(`🔄 Processing import: type=${type}, clinic=${clinicId}`);
 
     let successCount = 0;
     let errorCount = 0;
     let errors = [];
     let duplicates = [];
+    let warnings = [];
+
+    // Handle ChiroTouch full import
+    if (isChirotouch && type === 'chirotouch-full') {
+      console.log('🏥 Processing ChiroTouch full import...');
+
+      const importHistory = new ImportHistory({
+        clinicId,
+        importType: 'chirotouch-full',
+        importSource: 'ChiroTouch Export',
+        originalFileName: req.body.originalFileName || 'chirotouch-export.zip',
+        fileSize: req.body.fileSize || 0,
+        fileType: 'zip',
+        importedBy: userName,
+        importedByUserId: userId,
+        status: 'processing',
+        processingStarted: new Date()
+      });
+
+      try {
+        const result = await processChirotouchFullImport(structure, extractPath, clinicId, userName, selectedDatasets);
+
+        // Update import history
+        importHistory.summary = result.summary;
+        importHistory.chirotouchData = result.chirotouchData;
+        importHistory.errors = result.errors;
+        importHistory.duplicates = result.duplicates;
+        importHistory.warnings = result.warnings;
+        importHistory.status = 'completed';
+        importHistory.processingCompleted = new Date();
+        importHistory.processingDuration = Date.now() - importHistory.processingStarted.getTime();
+
+        await importHistory.save();
+
+        // Clean up extracted files
+        if (fs.existsSync(extractPath)) {
+          fs.rmSync(extractPath, { recursive: true, force: true });
+        }
+
+        return res.json({
+          success: true,
+          summary: result.summary,
+          chirotouchData: result.chirotouchData,
+          errors: result.errors.slice(0, 10),
+          duplicates: result.duplicates.slice(0, 10),
+          warnings: result.warnings.slice(0, 10),
+          importHistoryId: importHistory._id
+        });
+
+      } catch (error) {
+        importHistory.status = 'failed';
+        importHistory.processingCompleted = new Date();
+        importHistory.errors.push({
+          errorMessage: error.message,
+          timestamp: new Date()
+        });
+        await importHistory.save();
+        throw error;
+      }
+    }
+
+    // Handle regular CSV/Excel imports
+    if (!data || !Array.isArray(data)) {
+      return res.status(400).json({ message: 'Invalid data format' });
+    }
+
+    console.log(`📊 Processing ${data.length} records...`);
 
     // Process each record based on type
     for (let i = 0; i < data.length; i++) {
@@ -864,6 +1160,432 @@ async function processSoapNotesImport(data, clinicId, createdBy) {
   };
 
   await appointment.save();
+}
+
+// Helper function to process ChiroTouch full import
+async function processChirotouchFullImport(structure, extractPath, clinicId, createdBy, selectedDatasets = {}) {
+  const result = {
+    summary: {
+      totalProcessed: 0,
+      successCount: 0,
+      errorCount: 0,
+      duplicateCount: 0,
+      skippedCount: 0
+    },
+    chirotouchData: {
+      patientsImported: 0,
+      appointmentsImported: 0,
+      ledgerRecordsImported: 0,
+      chartNotesAttached: 0,
+      scannedDocsAttached: 0,
+      foldersProcessed: []
+    },
+    errors: [],
+    duplicates: [],
+    warnings: []
+  };
+
+  try {
+    // Process patients from 00_Tables if selected
+    if (selectedDatasets.patients !== false) {
+      console.log('👥 Processing patients...');
+      const patientFiles = structure.folders.tables.filter(f =>
+        f.fileName.toLowerCase().includes('patient') && f.fileName.endsWith('.csv')
+      );
+
+      for (const file of patientFiles) {
+        try {
+          const data = await parseCSVFile(file.filePath);
+          let fileSuccessCount = 0;
+          let fileErrorCount = 0;
+
+          for (const row of data) {
+            try {
+              // Map ChiroTouch patient fields to SpineLine format
+              const mappedData = mapChirotouchPatient(row);
+              await processPatientImport(mappedData, clinicId, createdBy, result.duplicates);
+              fileSuccessCount++;
+              result.summary.successCount++;
+            } catch (error) {
+              fileErrorCount++;
+              result.summary.errorCount++;
+              result.errors.push({
+                fileName: file.fileName,
+                errorMessage: error.message,
+                data: row,
+                timestamp: new Date()
+              });
+            }
+          }
+
+          result.chirotouchData.patientsImported += fileSuccessCount;
+          result.summary.totalProcessed += data.length;
+
+          result.chirotouchData.foldersProcessed.push({
+            folderName: '00_Tables/Patients',
+            fileCount: 1,
+            processedCount: fileSuccessCount,
+            errorCount: fileErrorCount
+          });
+
+        } catch (error) {
+          result.warnings.push({
+            type: 'missing_file',
+            message: `Failed to process patient file: ${file.fileName}`,
+            fileName: file.fileName,
+            timestamp: new Date()
+          });
+        }
+      }
+    }
+
+    // Process appointments from 00_Tables if selected
+    if (selectedDatasets.appointments !== false) {
+      console.log('📅 Processing appointments...');
+      const appointmentFiles = structure.folders.tables.filter(f =>
+        f.fileName.toLowerCase().includes('appointment') && f.fileName.endsWith('.csv')
+      );
+
+      for (const file of appointmentFiles) {
+        try {
+          const data = await parseCSVFile(file.filePath);
+          let fileSuccessCount = 0;
+          let fileErrorCount = 0;
+
+          for (const row of data) {
+            try {
+              const mappedData = mapChirotouchAppointment(row);
+              await processAppointmentImport(mappedData, clinicId, createdBy);
+              fileSuccessCount++;
+              result.summary.successCount++;
+            } catch (error) {
+              fileErrorCount++;
+              result.summary.errorCount++;
+              result.errors.push({
+                fileName: file.fileName,
+                errorMessage: error.message,
+                data: row,
+                timestamp: new Date()
+              });
+            }
+          }
+
+          result.chirotouchData.appointmentsImported += fileSuccessCount;
+          result.summary.totalProcessed += data.length;
+
+        } catch (error) {
+          result.warnings.push({
+            type: 'missing_file',
+            message: `Failed to process appointment file: ${file.fileName}`,
+            fileName: file.fileName,
+            timestamp: new Date()
+          });
+        }
+      }
+    }
+
+    // Process ledger records from 01_LedgerHistory if selected
+    if (selectedDatasets.ledger !== false) {
+      console.log('💰 Processing ledger records...');
+      for (const file of structure.folders.ledgerHistory) {
+        if (file.fileName.endsWith('.csv')) {
+          try {
+            const data = await parseCSVFile(file.filePath);
+            let fileSuccessCount = 0;
+            let fileErrorCount = 0;
+
+            for (const row of data) {
+              try {
+                const mappedData = mapChirotouchLedger(row);
+                await processLedgerImport(mappedData, clinicId, createdBy);
+                fileSuccessCount++;
+                result.summary.successCount++;
+              } catch (error) {
+                fileErrorCount++;
+                result.summary.errorCount++;
+                result.errors.push({
+                  fileName: file.fileName,
+                  errorMessage: error.message,
+                  data: row,
+                  timestamp: new Date()
+                });
+              }
+            }
+
+            result.chirotouchData.ledgerRecordsImported += fileSuccessCount;
+            result.summary.totalProcessed += data.length;
+
+          } catch (error) {
+            result.warnings.push({
+              type: 'missing_file',
+              message: `Failed to process ledger file: ${file.fileName}`,
+              fileName: file.fileName,
+              timestamp: new Date()
+            });
+          }
+        }
+      }
+    }
+
+    // Attach chart notes if selected
+    if (selectedDatasets.chartNotes !== false) {
+      console.log('📋 Attaching chart notes...');
+      result.chirotouchData.chartNotesAttached = await attachChartNotes(
+        structure.folders.chartNotes,
+        clinicId,
+        result.warnings
+      );
+    }
+
+    // Attach scanned documents if selected
+    if (selectedDatasets.scannedDocs !== false) {
+      console.log('📄 Attaching scanned documents...');
+      result.chirotouchData.scannedDocsAttached = await attachScannedDocs(
+        structure.folders.scannedDocs,
+        clinicId,
+        result.warnings
+      );
+    }
+
+    result.summary.duplicateCount = result.duplicates.length;
+
+    console.log('✅ ChiroTouch import completed:', result.summary);
+    return result;
+
+  } catch (error) {
+    console.error('❌ ChiroTouch import failed:', error);
+    throw error;
+  }
+}
+
+// Helper function to map ChiroTouch patient data to SpineLine format
+function mapChirotouchPatient(row) {
+  return {
+    firstName: row['First Name'] || row['FirstName'] || row['first_name'] || '',
+    lastName: row['Last Name'] || row['LastName'] || row['last_name'] || '',
+    dateOfBirth: row['Date of Birth'] || row['DOB'] || row['date_of_birth'] || '',
+    gender: row['Gender'] || row['Sex'] || '',
+    phone: row['Phone'] || row['Phone Number'] || row['phone_number'] || '',
+    email: row['Email'] || row['email'] || '',
+    street: row['Address'] || row['Street'] || row['address'] || '',
+    city: row['City'] || row['city'] || '',
+    state: row['State'] || row['state'] || '',
+    zipCode: row['Zip'] || row['Zip Code'] || row['zip_code'] || '',
+    recordNumber: row['Patient ID'] || row['PatientID'] || row['Record Number'] || row['patient_id'] || '',
+    notes: row['Notes'] || row['notes'] || ''
+  };
+}
+
+// Helper function to map ChiroTouch appointment data to SpineLine format
+function mapChirotouchAppointment(row) {
+  return {
+    appointmentDate: row['Appointment Date'] || row['Date'] || row['appointment_date'] || '',
+    appointmentTime: row['Time'] || row['Appointment Time'] || row['appointment_time'] || '09:00',
+    patientRecordNumber: row['Patient ID'] || row['PatientID'] || row['patient_id'] || '',
+    visitType: row['Visit Type'] || row['Type'] || row['visit_type'] || 'Regular Visit',
+    duration: row['Duration'] || row['duration'] || '30',
+    providerName: row['Provider'] || row['Doctor'] || row['provider'] || '',
+    notes: row['Notes'] || row['notes'] || ''
+  };
+}
+
+// Helper function to map ChiroTouch ledger data to SpineLine format
+function mapChirotouchLedger(row) {
+  return {
+    patientRecordNumber: row['Patient ID'] || row['PatientID'] || row['patient_id'] || '',
+    transactionDate: row['Date'] || row['Transaction Date'] || row['transaction_date'] || '',
+    transactionType: row['Type'] || row['Transaction Type'] || row['transaction_type'] || 'Payment',
+    description: row['Description'] || row['description'] || '',
+    amount: row['Amount'] || row['amount'] || '0',
+    paymentMethod: row['Payment Method'] || row['Method'] || row['payment_method'] || '',
+    notes: row['Notes'] || row['notes'] || ''
+  };
+}
+
+// Helper function to attach chart notes to patient records
+async function attachChartNotes(chartNoteFiles, clinicId, warnings) {
+  let attachedCount = 0;
+
+  for (const file of chartNoteFiles) {
+    try {
+      // Extract patient identifier from filename (common patterns)
+      const fileName = path.basename(file.fileName);
+      const patientId = extractPatientIdFromFilename(fileName);
+
+      if (!patientId) {
+        warnings.push({
+          type: 'missing_patient',
+          message: `Could not extract patient ID from chart note: ${fileName}`,
+          fileName: fileName,
+          timestamp: new Date()
+        });
+        continue;
+      }
+
+      // Find patient by record number or name
+      const patient = await Patient.findOne({
+        clinicId,
+        $or: [
+          { recordNumber: patientId },
+          { firstName: { $regex: patientId, $options: 'i' } },
+          { lastName: { $regex: patientId, $options: 'i' } }
+        ]
+      });
+
+      if (!patient) {
+        warnings.push({
+          type: 'missing_patient',
+          message: `Patient not found for chart note: ${fileName} (ID: ${patientId})`,
+          fileName: fileName,
+          affectedRecord: patientId,
+          timestamp: new Date()
+        });
+        continue;
+      }
+
+      // Copy file to patient documents folder
+      const documentsDir = path.join(__dirname, '../uploads/patient-documents');
+      if (!fs.existsSync(documentsDir)) {
+        fs.mkdirSync(documentsDir, { recursive: true });
+      }
+
+      const newFileName = `${patient._id}_${Date.now()}_${fileName}`;
+      const newFilePath = path.join(documentsDir, newFileName);
+
+      fs.copyFileSync(file.filePath, newFilePath);
+
+      // Add to patient's files array
+      if (!patient.files) {
+        patient.files = [];
+      }
+
+      patient.files.push({
+        fileName: fileName,
+        filePath: newFileName,
+        fileType: path.extname(fileName).toLowerCase(),
+        uploadedAt: new Date(),
+        uploadedBy: 'ChiroTouch Import',
+        category: 'Chart Notes',
+        description: 'Imported from ChiroTouch export'
+      });
+
+      await patient.save();
+      attachedCount++;
+
+    } catch (error) {
+      warnings.push({
+        type: 'format_issue',
+        message: `Failed to attach chart note: ${file.fileName} - ${error.message}`,
+        fileName: file.fileName,
+        timestamp: new Date()
+      });
+    }
+  }
+
+  return attachedCount;
+}
+
+// Helper function to attach scanned documents to patient records
+async function attachScannedDocs(scannedDocFiles, clinicId, warnings) {
+  let attachedCount = 0;
+
+  for (const file of scannedDocFiles) {
+    try {
+      const fileName = path.basename(file.fileName);
+      const patientId = extractPatientIdFromFilename(fileName);
+
+      if (!patientId) {
+        warnings.push({
+          type: 'missing_patient',
+          message: `Could not extract patient ID from scanned doc: ${fileName}`,
+          fileName: fileName,
+          timestamp: new Date()
+        });
+        continue;
+      }
+
+      const patient = await Patient.findOne({
+        clinicId,
+        $or: [
+          { recordNumber: patientId },
+          { firstName: { $regex: patientId, $options: 'i' } },
+          { lastName: { $regex: patientId, $options: 'i' } }
+        ]
+      });
+
+      if (!patient) {
+        warnings.push({
+          type: 'missing_patient',
+          message: `Patient not found for scanned doc: ${fileName} (ID: ${patientId})`,
+          fileName: fileName,
+          affectedRecord: patientId,
+          timestamp: new Date()
+        });
+        continue;
+      }
+
+      // Copy file to patient documents folder
+      const documentsDir = path.join(__dirname, '../uploads/patient-documents');
+      if (!fs.existsSync(documentsDir)) {
+        fs.mkdirSync(documentsDir, { recursive: true });
+      }
+
+      const newFileName = `${patient._id}_${Date.now()}_${fileName}`;
+      const newFilePath = path.join(documentsDir, newFileName);
+
+      fs.copyFileSync(file.filePath, newFilePath);
+
+      // Add to patient's files array
+      if (!patient.files) {
+        patient.files = [];
+      }
+
+      patient.files.push({
+        fileName: fileName,
+        filePath: newFileName,
+        fileType: path.extname(fileName).toLowerCase(),
+        uploadedAt: new Date(),
+        uploadedBy: 'ChiroTouch Import',
+        category: 'Scanned Documents',
+        description: 'Imported from ChiroTouch export'
+      });
+
+      await patient.save();
+      attachedCount++;
+
+    } catch (error) {
+      warnings.push({
+        type: 'format_issue',
+        message: `Failed to attach scanned doc: ${file.fileName} - ${error.message}`,
+        fileName: file.fileName,
+        timestamp: new Date()
+      });
+    }
+  }
+
+  return attachedCount;
+}
+
+// Helper function to extract patient ID from filename
+function extractPatientIdFromFilename(fileName) {
+  // Common patterns for patient identification in filenames
+  const patterns = [
+    /(\d+)/, // Any number sequence
+    /([A-Z]+\d+)/, // Letters followed by numbers
+    /(\d+[A-Z]+)/, // Numbers followed by letters
+    /(P\d+)/i, // P followed by numbers
+    /([A-Za-z]+_[A-Za-z]+)/, // FirstName_LastName pattern
+    /([A-Za-z]+\s[A-Za-z]+)/ // FirstName LastName pattern
+  ];
+
+  for (const pattern of patterns) {
+    const match = fileName.match(pattern);
+    if (match) {
+      return match[1];
+    }
+  }
+
+  return null;
 }
 
 module.exports = router;
