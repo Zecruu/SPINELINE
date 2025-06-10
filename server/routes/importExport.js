@@ -764,9 +764,6 @@ router.post('/upload', verifyToken, (req, res) => {
     version: '3.1.0'
   });
 });
-  // This is the simplified version - no complex processing
-  console.log('✅ Upload endpoint reached successfully');
-});
 
 // Global error handler for this router
 router.use((error, req, res, next) => {
