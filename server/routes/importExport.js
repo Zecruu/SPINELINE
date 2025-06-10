@@ -17,6 +17,17 @@ try {
 }
 
 const { verifyToken } = require('../middleware/auth');
+
+// Test endpoint to verify server is running latest code
+router.get('/test', (req, res) => {
+  res.json({
+    message: 'Import/Export API is running',
+    timestamp: new Date().toISOString(),
+    yauzlAvailable: !!yauzl,
+    version: '2.0.0'
+  });
+});
+
 const Patient = require('../models/Patient');
 const Appointment = require('../models/Appointment');
 const ServiceCode = require('../models/ServiceCode');
@@ -708,6 +719,8 @@ Maximum file size: 250MB`;
 
 // Upload and process import file
 router.post('/upload', verifyToken, (req, res, next) => {
+  console.log('🔄 Upload endpoint hit');
+
   // Handle multer errors
   upload.single('importFile')(req, res, (err) => {
     if (err) {
@@ -717,9 +730,11 @@ router.post('/upload', verifyToken, (req, res, next) => {
         error: err.message
       });
     }
+    console.log('✅ Multer processing completed');
     next();
   });
 }, async (req, res) => {
+  console.log('🔄 Starting upload processing...');
   try {
     const { type } = req.body;
     const { clinicId, userId } = req.user;
@@ -866,10 +881,25 @@ router.post('/upload', verifyToken, (req, res, next) => {
     console.error('❌ Error stack:', error.stack);
 
     // Ensure we always return JSON
+    if (!res.headersSent) {
+      res.status(500).json({
+        message: 'Failed to process uploaded file',
+        error: error.message,
+        details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      });
+    }
+  }
+});
+
+// Global error handler for this router
+router.use((error, req, res, next) => {
+  console.error('❌ Unhandled error in import/export router:', error);
+
+  if (!res.headersSent) {
     res.status(500).json({
-      message: 'Failed to process uploaded file',
+      message: 'Internal server error',
       error: error.message,
-      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      timestamp: new Date().toISOString()
     });
   }
 });
