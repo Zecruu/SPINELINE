@@ -86,7 +86,7 @@ app.all('/api/import-export/upload', (req, res) => {
   res.end('{"message":"DIRECT ROUTE WORKING","version":"5.0.0","timestamp":"' + new Date().toISOString() + '"}');
 });
 
-app.use('/api/import-export', require('./routes/importExport'));
+// app.use('/api/import-export', require('./routes/importExport')); // TEMPORARILY DISABLED
 app.use('/api/dx-clusters', require('./routes/dxClusters'));
 app.use('/api/billing-clusters', require('./routes/billingClusters'));
 app.use('/api/care-kits', require('./routes/careKits'));
