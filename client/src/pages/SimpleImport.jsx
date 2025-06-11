@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { Upload, FileText, Users, CheckCircle, AlertCircle } from 'lucide-react';
 
 const SimpleImport = () => {
   const [file, setFile] = useState(null);
@@ -95,16 +94,14 @@ const SimpleImport = () => {
   return (
     <div className="min-h-screen bg-gray-900 text-white p-6">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold mb-8 flex items-center gap-3">
-          <Upload className="w-8 h-8" />
-          Simple Patient Import
+        <h1 className="text-3xl font-bold mb-8">
+          📤 Simple Patient Import
         </h1>
 
         {/* File Upload */}
         <div className="bg-gray-800 rounded-lg p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-            <FileText className="w-5 h-5" />
-            Upload File
+          <h2 className="text-xl font-semibold mb-4">
+            📄 Upload File
           </h2>
           
           <div className="border-2 border-dashed border-gray-600 rounded-lg p-8 text-center">
@@ -116,7 +113,7 @@ const SimpleImport = () => {
               id="file-input"
             />
             <label htmlFor="file-input" className="cursor-pointer">
-              <Upload className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+              <div className="text-6xl mb-4 text-gray-400">📁</div>
               <p className="text-lg mb-2">Click to select a CSV or Excel file</p>
               <p className="text-gray-400">Supported formats: .csv, .xlsx, .xls</p>
             </label>
@@ -202,10 +199,9 @@ const SimpleImport = () => {
             <button
               onClick={handleImport}
               disabled={importing || !columnMapping.firstName || !columnMapping.lastName}
-              className="mt-6 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 px-6 py-3 rounded-lg flex items-center gap-2"
+              className="mt-6 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 px-6 py-3 rounded-lg"
             >
-              <Users className="w-5 h-5" />
-              {importing ? 'Importing...' : 'Import Patients'}
+              👥 {importing ? 'Importing...' : 'Import Patients'}
             </button>
           </div>
         )}
@@ -213,9 +209,8 @@ const SimpleImport = () => {
         {/* Results */}
         {result && (
           <div className="bg-gray-800 rounded-lg p-6">
-            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-              <CheckCircle className="w-5 h-5 text-green-500" />
-              Import Results
+            <h2 className="text-xl font-semibold mb-4">
+              ✅ Import Results
             </h2>
             
             <div className="grid grid-cols-3 gap-4 mb-4">
@@ -241,9 +236,8 @@ const SimpleImport = () => {
 
             {result.errors && result.errors.length > 0 && (
               <div className="mt-4">
-                <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
-                  <AlertCircle className="w-5 h-5 text-red-500" />
-                  Errors
+                <h3 className="text-lg font-semibold mb-2">
+                  ⚠️ Errors
                 </h3>
                 <div className="bg-red-900 p-4 rounded-lg">
                   {result.errors.map((error, i) => (
