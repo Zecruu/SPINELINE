@@ -74,6 +74,13 @@ app.use('/api/templates', require('./routes/templates'));
 app.use('/api/audit', require('./routes/audit'));
 app.use('/api/reports', require('./routes/reports'));
 app.use('/api/ledger', require('./routes/ledger'));
+// Direct test route to bypass router issues
+app.all('/api/import-export/upload', (req, res) => {
+  console.log('DIRECT SERVER ROUTE HIT');
+  res.writeHead(200, { 'Content-Type': 'application/json' });
+  res.end('{"message":"DIRECT ROUTE WORKING","version":"5.0.0","timestamp":"' + new Date().toISOString() + '"}');
+});
+
 app.use('/api/import-export', require('./routes/importExport'));
 app.use('/api/dx-clusters', require('./routes/dxClusters'));
 app.use('/api/billing-clusters', require('./routes/billingClusters'));
