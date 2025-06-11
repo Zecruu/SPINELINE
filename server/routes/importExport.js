@@ -750,7 +750,12 @@ router.post('/upload-test', verifyToken, (req, res) => {
 
 // Upload and process import file - now with multer and error handling
 router.post('/upload', upload.single('file'), (req, res) => {
+  console.log('--- /api/import-export/upload called ---');
+  console.log('Headers:', req.headers);
+  console.log('Body:', req.body);
+  console.log('File:', req.file);
   if (!req.file) {
+    console.error('No file uploaded');
     return res.status(400).json({ message: 'No file uploaded' });
   }
   res.json({ message: 'File uploaded successfully', filename: req.file.filename });
@@ -758,6 +763,7 @@ router.post('/upload', upload.single('file'), (req, res) => {
 
 // Multer error handler for this router
 router.use((err, req, res, next) => {
+  console.error('Router Multer/FileType error:', err);
   if (err instanceof multer.MulterError) {
     return res.status(400).json({ message: err.message, type: 'MulterError' });
   } else if (err && err.message && err.message.includes('Only CSV, Excel, and ZIP files are allowed')) {
@@ -770,7 +776,7 @@ router.use((err, req, res, next) => {
 router.use((error, req, res, next) => {
   console.error('❌ Unhandled error in import/export router:', error);
   console.error('❌ Error type:', typeof error);
-  console.error('❌ Error stack:', error.stack);
+  if (error && error.stack) console.error('❌ Error stack:', error.stack);
 
   // Force JSON response
   res.setHeader('Content-Type', 'application/json');
@@ -783,7 +789,7 @@ router.use((error, req, res, next) => {
       route: req.path,
       method: req.method
     };
-
+    console.error('Responding with JSON error:', errorResponse);
     res.status(500).json(errorResponse);
   }
 });
