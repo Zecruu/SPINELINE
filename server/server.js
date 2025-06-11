@@ -74,6 +74,11 @@ app.use('/api/templates', require('./routes/templates'));
 app.use('/api/audit', require('./routes/audit'));
 app.use('/api/reports', require('./routes/reports'));
 app.use('/api/ledger', require('./routes/ledger'));
+// Super simple test route
+app.all('/api/test-upload', (req, res) => {
+  res.json({ message: 'TEST WORKING', version: '6.0.0' });
+});
+
 // Direct test route to bypass router issues
 app.all('/api/import-export/upload', (req, res) => {
   console.log('DIRECT SERVER ROUTE HIT');
