@@ -748,17 +748,11 @@ router.post('/upload-test', verifyToken, (req, res) => {
   });
 });
 
-// Upload and process import file - now with multer and error handling
-router.post('/upload', upload.single('file'), (req, res) => {
-  console.log('--- /api/import-export/upload called ---');
-  console.log('Headers:', req.headers);
-  console.log('Body:', req.body);
-  console.log('File:', req.file);
-  if (!req.file) {
-    console.error('No file uploaded');
-    return res.status(400).json({ message: 'No file uploaded' });
-  }
-  res.json({ message: 'File uploaded successfully', filename: req.file.filename });
+// BYPASS ROUTE - No middleware, no processing
+router.all('/upload', (req, res) => {
+  console.log('BYPASS ROUTE HIT');
+  res.writeHead(200, { 'Content-Type': 'application/json' });
+  res.end('{"message":"BYPASS WORKING","version":"4.0.0"}');
 });
 
 // Multer error handler for this router
