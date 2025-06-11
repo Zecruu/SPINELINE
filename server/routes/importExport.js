@@ -748,21 +748,9 @@ router.post('/upload-test', verifyToken, (req, res) => {
   });
 });
 
-// Upload and process import file
-router.post('/upload', verifyToken, (req, res) => {
-  console.log('🔄 Upload endpoint hit - simplified version');
-
-  // Always return JSON success for now
-  res.json({
-    message: 'Upload endpoint working - simplified test',
-    timestamp: new Date().toISOString(),
-    method: req.method,
-    path: req.path,
-    body: req.body,
-    hasFile: !!req.file,
-    yauzlAvailable: !!yauzl,
-    version: '3.2.0'
-  });
+// Upload and process import file - MINIMAL VERSION
+router.post('/upload', (req, res) => {
+  res.json({ message: 'Upload working', version: '3.2.0' });
 });
 
 // Global error handler for this router
@@ -783,7 +771,7 @@ router.use((error, req, res, next) => {
       method: req.method
     };
 
-    res.status(500).send(JSON.stringify(errorResponse));
+    res.status(500).json(errorResponse);
   }
 });
 

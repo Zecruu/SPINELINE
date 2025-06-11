@@ -90,8 +90,11 @@ if (process.env.NODE_ENV === 'production') {
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({
-    message: 'Something went wrong!',
-    error: process.env.NODE_ENV === 'development' ? err.message : {}
+    message: 'Internal server error',
+    error: process.env.NODE_ENV === 'development' ? err.message : 'Unknown error',
+    timestamp: new Date().toISOString(),
+    route: req.path,
+    method: req.method
   });
 });
 
