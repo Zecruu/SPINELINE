@@ -11,6 +11,7 @@ import AuditRecords from './pages/AuditRecords'
 import Reports from './pages/Reports'
 import Ledger from './pages/Ledger'
 import ImportExport from './pages/ImportExport'
+import SimpleImport from './pages/SimpleImport'
 import AppointmentHistory from './pages/AppointmentHistory'
 import Settings from './pages/Settings'
 import DoctorTodaysPatients from './pages/DoctorTodaysPatients'
@@ -39,6 +40,7 @@ function App() {
         <Route path="/secretary/reports" element={<Reports />} />
         <Route path="/secretary/ledger" element={<Ledger />} />
         <Route path="/secretary/import-export" element={<ImportExport />} />
+        <Route path="/secretary/simple-import" element={<SimpleImport />} />
         <Route path="/secretary/settings" element={<Settings />} />
         <Route path="/doctor" element={<DoctorTodaysPatients />} />
         <Route path="/doctor/scheduler" element={<AppointmentScheduler />} />
