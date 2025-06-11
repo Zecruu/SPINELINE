@@ -748,9 +748,22 @@ router.post('/upload-test', verifyToken, (req, res) => {
   });
 });
 
-// Upload and process import file - MINIMAL VERSION
-router.post('/upload', (req, res) => {
-  res.json({ message: 'Upload working', version: '3.2.0' });
+// Upload and process import file - now with multer and error handling
+router.post('/upload', upload.single('file'), (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ message: 'No file uploaded' });
+  }
+  res.json({ message: 'File uploaded successfully', filename: req.file.filename });
+});
+
+// Multer error handler for this router
+router.use((err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    return res.status(400).json({ message: err.message, type: 'MulterError' });
+  } else if (err && err.message && err.message.includes('Only CSV, Excel, and ZIP files are allowed')) {
+    return res.status(400).json({ message: err.message, type: 'FileTypeError' });
+  }
+  next(err);
 });
 
 // Global error handler for this router

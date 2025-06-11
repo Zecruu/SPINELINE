@@ -86,6 +86,14 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
+// Multer error handler (global)
+app.use((err, req, res, next) => {
+  if (err && err.name === 'MulterError') {
+    return res.status(400).json({ message: err.message, type: 'MulterError' });
+  }
+  next(err);
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
