@@ -1,50 +1,22 @@
 const express = require('express');
 const router = express.Router();
-const multer = require('multer');
-const csv = require('csv-parser');
-const XLSX = require('xlsx');
-const fs = require('fs');
-const path = require('path');
 
-// Check if yauzl is available
-let yauzl;
-try {
-  yauzl = require('yauzl');
-  console.log('✅ yauzl module loaded successfully');
-} catch (error) {
-  console.error('❌ Failed to load yauzl module:', error.message);
-  console.error('❌ ZIP file processing will not be available');
-}
+console.log('✅ MINIMAL ImportExport route loading...');
 
-console.log('🔄 ImportExport route module loading...');
-
-const { verifyToken } = require('../middleware/auth');
-
-// Simple logging middleware
-router.use((req, res, next) => {
-  console.log(`🔄 Import/Export route hit: ${req.method} ${req.path}`);
-  next();
+// Minimal test route
+router.get('/test', (req, res) => {
+  res.json({
+    message: 'MINIMAL Import/Export API working',
+    version: '7.0.0',
+    timestamp: new Date().toISOString()
+  });
 });
 
-// Test endpoint to verify server is running latest code
-router.get('/test', (req, res) => {
-  let yauzlTest = 'not available';
-  if (yauzl) {
-    try {
-      yauzlTest = 'available and functional';
-    } catch (error) {
-      yauzlTest = `available but error: ${error.message}`;
-    }
-  }
-
+// Minimal upload route
+router.post('/upload', (req, res) => {
   res.json({
-    message: 'Import/Export API is running',
-    timestamp: new Date().toISOString(),
-    yauzlAvailable: !!yauzl,
-    yauzlTest: yauzlTest,
-    version: '3.1.0',
-    nodeVersion: process.version,
-    platform: process.platform
+    message: 'MINIMAL upload working',
+    version: '7.0.0'
   });
 });
 
