@@ -86,6 +86,15 @@ app.all('/api/import-export/upload', (req, res) => {
   res.end('{"message":"DIRECT ROUTE WORKING","version":"5.0.0","timestamp":"' + new Date().toISOString() + '"}');
 });
 
+// Simple test route for debugging
+app.get('/api/simple-test', (req, res) => {
+  res.json({
+    message: 'Simple test route working!',
+    timestamp: new Date().toISOString(),
+    version: '1.0.0'
+  });
+});
+
 // Simple import system
 app.use('/api/simple-import', require('./routes/simpleImport'));
 app.use('/api/dx-clusters', require('./routes/dxClusters'));
