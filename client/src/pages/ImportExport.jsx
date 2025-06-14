@@ -180,11 +180,11 @@ const ImportExport = () => {
 
     try {
       const formData = new FormData();
-      formData.append('importFile', file);
+      formData.append('file', file);
       formData.append('type', importType);
 
       const token = localStorage.getItem('userToken');
-      const response = await fetch('/api/import-export/upload', {
+      const response = await fetch('/api/simple-import/upload', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -231,7 +231,7 @@ const ImportExport = () => {
   const downloadTemplate = async (type) => {
     try {
       const token = localStorage.getItem('userToken');
-      const response = await fetch(`/api/import-export/template/${type}`, {
+      const response = await fetch(`/api/simple-import/test`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
