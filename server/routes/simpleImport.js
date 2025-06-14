@@ -78,13 +78,44 @@ router.post('/upload', verifyToken, upload.single('file'), async (req, res) => {
     const preview = data.slice(0, 5);
     const columns = data.length > 0 ? Object.keys(data[0]) : [];
 
-    res.json({
-      success: true,
-      totalRows: data.length,
-      preview: preview,
-      columns: columns,
-      message: `Successfully parsed ${data.length} rows`
-    });
+    // Check if this is a ChiroTouch import
+    const isChirotouch = fileExtension === '.zip';
+
+    if (isChirotouch) {
+      // Format response for ChiroTouch imports
+      res.json({
+        success: true,
+        isChirotouch: true,
+        totalRows: data.length,
+        data: data, // Full data for ChiroTouch
+        preview: {
+          summary: {
+            totalPatients: data.length,
+            totalAppointments: 0,
+            totalLedgerRecords: 0
+          },
+          patients: preview
+        },
+        structure: {
+          patients: { found: true, count: data.length },
+          appointments: { found: false, count: 0 },
+          ledger: { found: false, count: 0 }
+        },
+        columns: columns,
+        message: `ChiroTouch export processed: ${data.length} patients found`
+      });
+    } else {
+      // Format response for regular CSV/Excel imports
+      res.json({
+        success: true,
+        isChirotouch: false,
+        totalRows: data.length,
+        data: data,
+        preview: preview,
+        columns: columns,
+        message: `Successfully parsed ${data.length} rows`
+      });
+    }
 
   } catch (error) {
     console.error('Upload error:', error);
