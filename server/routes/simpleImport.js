@@ -5,6 +5,7 @@ const csv = require('csv-parser');
 const XLSX = require('xlsx');
 const fs = require('fs');
 const path = require('path');
+const AdmZip = require('adm-zip');
 const { verifyToken } = require('../middleware/auth');
 const Patient = require('../models/Patient');
 
@@ -29,12 +30,12 @@ const upload = multer({
     fileSize: 10 * 1024 * 1024 // 10MB limit
   },
   fileFilter: (req, file, cb) => {
-    const allowedTypes = ['.csv', '.xlsx', '.xls'];
+    const allowedTypes = ['.csv', '.xlsx', '.xls', '.zip'];
     const ext = path.extname(file.originalname).toLowerCase();
     if (allowedTypes.includes(ext)) {
       cb(null, true);
     } else {
-      cb(new Error('Only CSV and Excel files are allowed'));
+      cb(new Error('Only CSV, Excel, and ZIP files are allowed'));
     }
   }
 });
@@ -66,6 +67,8 @@ router.post('/upload', verifyToken, upload.single('file'), async (req, res) => {
       data = await parseCSV(filePath);
     } else if (fileExtension === '.xlsx' || fileExtension === '.xls') {
       data = await parseExcel(filePath);
+    } else if (fileExtension === '.zip') {
+      data = await parseChiroTouchZip(filePath);
     }
 
     // Clean up uploaded file
@@ -195,6 +198,47 @@ function parseExcel(filePath) {
       const worksheet = workbook.Sheets[sheetName];
       const data = XLSX.utils.sheet_to_json(worksheet);
       resolve(data);
+    } catch (error) {
+      reject(error);
+    }
+  });
+}
+
+// Helper function to parse ChiroTouch ZIP
+function parseChiroTouchZip(filePath) {
+  return new Promise((resolve, reject) => {
+    try {
+      const zip = new AdmZip(filePath);
+      const zipEntries = zip.getEntries();
+
+      // Look for patient data in 00_Tables folder
+      const patientEntry = zipEntries.find(entry =>
+        entry.entryName.includes('00_Tables') &&
+        entry.entryName.toLowerCase().includes('patient')
+      );
+
+      if (patientEntry) {
+        // Extract and parse patient CSV
+        const csvContent = patientEntry.getData().toString('utf8');
+        const lines = csvContent.split('\n');
+        const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+
+        const data = [];
+        for (let i = 1; i < lines.length; i++) {
+          if (lines[i].trim()) {
+            const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
+            const row = {};
+            headers.forEach((header, index) => {
+              row[header] = values[index] || '';
+            });
+            data.push(row);
+          }
+        }
+
+        resolve(data);
+      } else {
+        reject(new Error('No patient data found in ChiroTouch export'));
+      }
     } catch (error) {
       reject(error);
     }
