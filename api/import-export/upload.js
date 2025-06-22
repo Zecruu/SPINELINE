@@ -29,7 +29,10 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage: storage,
   limits: {
-    fileSize: 250 * 1024 * 1024 // 250MB limit for ChiroTouch exports
+    fileSize: 500 * 1024 * 1024, // 500MB limit for ChiroTouch exports
+    fieldSize: 500 * 1024 * 1024,
+    fields: 10,
+    files: 1
   },
   fileFilter: (req, file, cb) => {
     const allowedTypes = ['.csv', '.xlsx', '.xls', '.zip'];

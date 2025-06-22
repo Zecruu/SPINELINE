@@ -161,14 +161,17 @@ const ImportExport = () => {
         return;
       }
 
-      // Validate file size (250MB for ChiroTouch, 10MB for others)
-      const maxSize = importType === 'chirotouch-full' ? 250 * 1024 * 1024 : 10 * 1024 * 1024;
+      // Validate file size (500MB for ChiroTouch, 10MB for others)
+      const maxSize = importType === 'chirotouch-full' ? 500 * 1024 * 1024 : 10 * 1024 * 1024;
       if (file.size > maxSize) {
-        setError(`File too large. Maximum size is ${importType === 'chirotouch-full' ? '250MB' : '10MB'}.`);
+        setError(`File too large. Maximum size is ${importType === 'chirotouch-full' ? '500MB' : '10MB'}.`);
         return;
       }
 
-      processFile(file);
+      // Just set the file, don't process it yet
+      setSelectedFile(file);
+      setError('');
+      setSuccess('');
     }
   };
 
@@ -225,7 +228,17 @@ const ImportExport = () => {
     const file = event.target.files[0];
     if (!file) return;
 
-    processFile(file);
+    // Validate file size (500MB for ChiroTouch, 10MB for others)
+    const maxSize = importType === 'chirotouch-full' ? 500 * 1024 * 1024 : 10 * 1024 * 1024;
+    if (file.size > maxSize) {
+      setError(`File too large. Maximum size is ${importType === 'chirotouch-full' ? '500MB' : '10MB'}.`);
+      return;
+    }
+
+    // Just set the file, don't process it yet
+    setSelectedFile(file);
+    setError('');
+    setSuccess('');
   };
 
   const downloadTemplate = async (type) => {
@@ -614,7 +627,7 @@ const ImportExport = () => {
                       <span> or drag and drop</span>
                     </div>
                     <p className="text-xs text-gray-500">
-                      {importType === 'chirotouch-full' ? 'ZIP files only (max 250MB)' : 'CSV or XLSX files only'}
+                      {importType === 'chirotouch-full' ? 'ZIP files only (max 500MB)' : 'CSV or XLSX files only'}
                     </p>
                     <input
                       id="file-upload"
@@ -630,18 +643,65 @@ const ImportExport = () => {
                         <div className="flex items-center space-x-2">
                           <DocumentArrowUpIcon className="h-5 w-5 text-green-400" />
                           <span className="text-sm text-white">{selectedFile.name}</span>
-                          <span className="text-xs text-gray-400">({(selectedFile.size / 1024).toFixed(1)} KB)</span>
+                          <span className="text-xs text-gray-400">({(selectedFile.size / (1024 * 1024)).toFixed(1)} MB)</span>
                         </div>
                         <button
                           onClick={() => {
                             setSelectedFile(null);
                             setImportStep(1);
+                            setImportPreview(null);
+                            setIsChirotouch(false);
                           }}
                           className="text-red-400 hover:text-red-300"
                         >
                           <XCircleIcon className="h-5 w-5" />
                         </button>
                       </div>
+
+                      {/* Show Initiate Import button for uploaded files */}
+                      {!loading && !importPreview && (
+                        <div className="mt-3 pt-3 border-t border-gray-500">
+                          <div className="flex items-center justify-between">
+                            <div className="text-xs text-gray-300">
+                              <span>📁 File ready for upload</span>
+                            </div>
+                            <button
+                              onClick={() => processFile(selectedFile)}
+                              disabled={loading}
+                              className="px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
+                            >
+                              {loading ? 'Uploading...' : 'Upload & Process'}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Show success message and next step button after upload */}
+                      {importPreview && importStep === 1 && (
+                        <div className="mt-3 pt-3 border-t border-gray-500">
+                          <div className="flex items-center justify-between">
+                            <div className="text-xs text-gray-300">
+                              {isChirotouch ? (
+                                <span>✅ ChiroTouch ZIP file uploaded successfully</span>
+                              ) : (
+                                <span>✅ File uploaded successfully - {importPreview.totalRows} rows detected</span>
+                              )}
+                            </div>
+                            <button
+                              onClick={() => {
+                                if (isChirotouch) {
+                                  setImportStep(2); // Go to ChiroTouch review
+                                } else {
+                                  setImportStep(2); // Go to column mapping
+                                }
+                              }}
+                              className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+                            >
+                              {isChirotouch ? 'Review & Import' : 'Map Columns'}
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
