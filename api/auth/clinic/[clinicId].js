@@ -43,6 +43,17 @@ const connectDB = async () => {
 const clinicSchema = new mongoose.Schema({
   clinicName: { type: String, required: true },
   clinicId: { type: String, required: true, unique: true },
+  contactInfo: {
+    email: { type: String },
+    phone: { type: String },
+    address: {
+      street: String,
+      city: String,
+      state: String,
+      zipCode: String,
+      country: { type: String, default: 'USA' }
+    }
+  },
   isActive: { type: Boolean, default: true }
 }, { timestamps: true });
 
