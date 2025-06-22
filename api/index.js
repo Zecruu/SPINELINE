@@ -76,11 +76,6 @@ const checkConnection = () => {
   return mongoose.connection.readyState === 1;
 };
 
-// Export isConnected for compatibility with server routes
-const isConnected = () => {
-  return mongoose.connection.readyState === 1;
-};
-
 const app = express();
 
 // Middleware
@@ -99,7 +94,7 @@ app.use(async (req, res, next) => {
   try {
     await connectDB();
     req.dbConnected = true;
-    req.isConnected = isConnected; // Add isConnected function to request
+    req.isConnected = checkConnection; // Add isConnected function to request
     next();
   } catch (error) {
     console.error('Database connection failed:', error);
