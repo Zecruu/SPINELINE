@@ -25,8 +25,10 @@ app.use(cors({
   origin: process.env.CLIENT_URL || 'http://localhost:7890',
   credentials: true
 }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+
+// Increase payload limits for file uploads
+app.use(express.json({ limit: '500mb' }));
+app.use(express.urlencoded({ extended: true, limit: '500mb' }));
 
 // Serve static files for uploads
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -74,19 +76,8 @@ app.use('/api/templates', require('./routes/templates'));
 app.use('/api/audit', require('./routes/audit'));
 app.use('/api/reports', require('./routes/reports'));
 app.use('/api/ledger', require('./routes/ledger'));
-// Super simple test route
-app.all('/api/test-upload', (req, res) => {
-  res.json({ message: 'TEST WORKING', version: '6.0.0' });
-});
-
-// Direct test route to bypass router issues
-app.all('/api/import-export/upload', (req, res) => {
-  console.log('DIRECT SERVER ROUTE HIT');
-  res.writeHead(200, { 'Content-Type': 'application/json' });
-  res.end('{"message":"DIRECT ROUTE WORKING","version":"5.0.0","timestamp":"' + new Date().toISOString() + '"}');
-});
-
-app.use('/api/import-export', require('./routes/importExport_minimal'));
+// Import/Export routes (with proper file upload handling)
+app.use('/api/import-export', require('./routes/importExport'));
 app.use('/api/dx-clusters', require('./routes/dxClusters'));
 app.use('/api/billing-clusters', require('./routes/billingClusters'));
 app.use('/api/care-kits', require('./routes/careKits'));

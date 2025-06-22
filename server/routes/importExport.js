@@ -1,22 +1,21 @@
 const express = require('express');
 const router = express.Router();
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+const csv = require('csv-parser');
+const XLSX = require('xlsx');
+const yauzl = require('yauzl');
+const { verifyToken } = require('../middleware/auth');
 
-console.log('✅ MINIMAL ImportExport route loading...');
+console.log('✅ ImportExport route loading...');
 
-// Minimal test route
+// Test route
 router.get('/test', (req, res) => {
   res.json({
-    message: 'MINIMAL Import/Export API working',
-    version: '7.0.0',
+    message: 'Import/Export API working',
+    version: '8.0.0',
     timestamp: new Date().toISOString()
-  });
-});
-
-// Minimal upload route
-router.post('/upload', (req, res) => {
-  res.json({
-    message: 'MINIMAL upload working',
-    version: '7.0.0'
   });
 });
 
@@ -48,7 +47,10 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage: storage,
   limits: {
-    fileSize: 250 * 1024 * 1024 // 250MB limit for ChiroTouch exports
+    fileSize: 500 * 1024 * 1024, // 500MB limit for ChiroTouch exports
+    fieldSize: 500 * 1024 * 1024,
+    fields: 10,
+    files: 1
   },
   fileFilter: (req, file, cb) => {
     const allowedTypes = ['.csv', '.xlsx', '.xls', '.zip'];
@@ -720,11 +722,94 @@ router.post('/upload-test', verifyToken, (req, res) => {
   });
 });
 
-// BYPASS ROUTE - No middleware, no processing
-router.all('/upload', (req, res) => {
-  console.log('BYPASS ROUTE HIT');
-  res.writeHead(200, { 'Content-Type': 'application/json' });
-  res.end('{"message":"BYPASS WORKING","version":"4.0.0"}');
+// File upload endpoint with proper handling
+router.post('/upload', upload.single('importFile'), async (req, res) => {
+  try {
+    console.log('📤 File upload endpoint hit');
+    console.log('File:', req.file ? req.file.originalname : 'No file');
+    console.log('Type:', req.body.type);
+
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No file uploaded'
+      });
+    }
+
+    const { type } = req.body;
+    const filePath = req.file.path;
+    const fileExtension = path.extname(req.file.originalname).toLowerCase();
+
+    console.log(`Processing file: ${req.file.originalname}, size: ${req.file.size} bytes`);
+
+    // Handle ZIP files (ChiroTouch exports)
+    if (fileExtension === '.zip') {
+      console.log('🗜️ Processing ZIP file...');
+
+      const extractPath = path.join(path.dirname(filePath), `extracted_${Date.now()}`);
+      fs.mkdirSync(extractPath, { recursive: true });
+
+      try {
+        // For now, just return success with basic info
+        // The actual extraction will be handled in the process endpoint
+        return res.json({
+          success: true,
+          isChirotouch: true,
+          message: 'ZIP file uploaded successfully',
+          uploadId: req.file.filename,
+          originalFileName: req.file.originalname,
+          fileSize: req.file.size,
+          extractPath: extractPath,
+          preview: {
+            summary: {
+              totalPatients: 0,
+              totalAppointments: 0,
+              totalLedgerRecords: 0
+            },
+            patients: { count: 0 },
+            appointments: { count: 0 },
+            ledger: { count: 0 },
+            chartNotes: { count: 0 },
+            scannedDocs: { count: 0 }
+          }
+        });
+      } catch (error) {
+        console.error('ZIP processing error:', error);
+        return res.status(400).json({
+          success: false,
+          message: 'Failed to process ZIP file: ' + error.message
+        });
+      }
+    }
+
+    // Handle CSV/Excel files
+    return res.json({
+      success: true,
+      isChirotouch: false,
+      message: 'File uploaded successfully',
+      uploadId: req.file.filename,
+      originalFileName: req.file.originalname,
+      fileSize: req.file.size,
+      totalRows: 0, // Will be populated when we parse the file
+      preview: [],
+      columns: []
+    });
+
+  } catch (error) {
+    console.error('Upload error:', error);
+
+    if (error.code === 'LIMIT_FILE_SIZE') {
+      return res.status(413).json({
+        success: false,
+        message: 'File too large. Maximum size is 500MB.'
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: 'Upload failed: ' + error.message
+    });
+  }
 });
 
 // Multer error handler for this router
@@ -1576,6 +1661,6 @@ function extractPatientIdFromFilename(fileName) {
   return null;
 }
 
-console.log('✅ ImportExport route module loaded successfully');
+console.log('✅ ImportExport route loaded successfully');
 
 module.exports = router;
