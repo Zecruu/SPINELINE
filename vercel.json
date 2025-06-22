@@ -3,19 +3,6 @@
   "name": "spineline",
   "buildCommand": "cd client && npm ci && npm run build",
   "outputDirectory": "client/dist",
-  "functions": {
-    "api/**/*.js": {
-      "maxDuration": 30,
-      "memory": 1024
-    },
-    "api/import-export/**/*.js": {
-      "maxDuration": 60,
-      "memory": 3008
-    }
-  },
-  "limits": {
-    "duration": 60000
-  },
   "rewrites": [
     {
       "source": "/secret-admin/(.*)",
