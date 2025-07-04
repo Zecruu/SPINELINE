@@ -165,10 +165,18 @@ const ImportExport = () => {
         return;
       }
 
-      // Validate file size (50MB for ChiroTouch on Vercel, 10MB for others)
-      const maxSize = importType === 'chirotouch-full' ? 50 * 1024 * 1024 : 10 * 1024 * 1024;
+      // Validate file size (Railway supports larger files)
+      const isRailway = window.location.hostname.includes('railway.app') || window.location.hostname.includes('up.railway.app');
+      const maxSize = importType === 'chirotouch-full'
+        ? (isRailway ? 500 * 1024 * 1024 : 50 * 1024 * 1024)
+        : 10 * 1024 * 1024;
+
       if (file.size > maxSize) {
-        setError(`File too large. Maximum size is ${importType === 'chirotouch-full' ? '50MB' : '10MB'} due to Vercel deployment limits.`);
+        const maxSizeText = importType === 'chirotouch-full'
+          ? (isRailway ? '500MB' : '50MB')
+          : '10MB';
+        const platform = isRailway ? 'Railway' : 'Vercel';
+        setError(`File too large. Maximum size is ${maxSizeText} on ${platform}.`);
         return;
       }
 
@@ -247,10 +255,18 @@ const ImportExport = () => {
     const file = event.target.files[0];
     if (!file) return;
 
-    // Validate file size (50MB for ChiroTouch on Vercel, 10MB for others)
-    const maxSize = importType === 'chirotouch-full' ? 50 * 1024 * 1024 : 10 * 1024 * 1024;
+    // Validate file size (Railway supports larger files)
+    const isRailway = window.location.hostname.includes('railway.app') || window.location.hostname.includes('up.railway.app');
+    const maxSize = importType === 'chirotouch-full'
+      ? (isRailway ? 500 * 1024 * 1024 : 50 * 1024 * 1024)
+      : 10 * 1024 * 1024;
+
     if (file.size > maxSize) {
-      setError(`File too large. Maximum size is ${importType === 'chirotouch-full' ? '50MB' : '10MB'} due to Vercel deployment limits.`);
+      const maxSizeText = importType === 'chirotouch-full'
+        ? (isRailway ? '500MB' : '50MB')
+        : '10MB';
+      const platform = isRailway ? 'Railway' : 'Vercel';
+      setError(`File too large. Maximum size is ${maxSizeText} on ${platform}.`);
       return;
     }
 
@@ -663,7 +679,9 @@ const ImportExport = () => {
                       <span> or drag and drop</span>
                     </div>
                     <p className="text-xs text-gray-500">
-                      {importType === 'chirotouch-full' ? 'ZIP files only (max 50MB)' : 'CSV or XLSX files only (max 10MB)'}
+                      {importType === 'chirotouch-full'
+                        ? `ZIP files only (max ${window.location.hostname.includes('railway.app') ? '500MB' : '50MB'})`
+                        : 'CSV or XLSX files only (max 10MB)'}
                     </p>
                     <input
                       id="file-upload"

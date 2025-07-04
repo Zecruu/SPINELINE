@@ -11,8 +11,11 @@
     "client:build": "cd client && npm run build",
     "install:all": "npm install && cd server && npm install && cd ../client && npm install",
     "build": "npm run client:build",
-    "start": "npm run server:start",
+    "start": "cd server && npm start",
     "heroku-postbuild": "npm run install:all && npm run client:build",
+    "postinstall": "npm install --prefix server && npm install --prefix client && npm run client:build",
+    "railway:build": "npm run install:all && npm run client:build",
+    "railway:start": "npm run server:start",
     "test": "echo \"Error: no test specified\" && exit 1",
     "test:admin": "node scripts/test-admin.js",
     "test:admin:prod": "node scripts/test-admin.js https://your-domain.com"
