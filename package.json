@@ -14,6 +14,8 @@
     "start": "cd server && npm start",
     "heroku-postbuild": "npm run install:all && npm run client:build",
     "postinstall": "npm install --prefix server && npm install --prefix client && npm run client:build",
+    "railway:install": "npm install && npm install --prefix server && npm install --prefix client",
+    "railway:build": "npm run client:build",
     "railway:build": "npm run install:all && npm run client:build",
     "railway:start": "npm run server:start",
     "test": "echo \"Error: no test specified\" && exit 1",
