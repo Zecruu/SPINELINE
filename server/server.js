@@ -45,14 +45,16 @@ app.use((req, res, next) => {
   next();
 });
 
-// Routes
-app.get('/', (req, res) => {
-  res.json({
-    message: 'SpineLine API Server is running!',
-    version: '1.0.0',
-    environment: process.env.NODE_ENV
+// Routes - only show API message in development
+if (process.env.NODE_ENV !== 'production') {
+  app.get('/', (req, res) => {
+    res.json({
+      message: 'SpineLine API Server is running!',
+      version: '1.0.0',
+      environment: process.env.NODE_ENV
+    });
   });
-});
+}
 
 // Redirect /login to /api/auth/login for backward compatibility
 app.all('/login', (req, res) => {
