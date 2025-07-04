@@ -13,7 +13,7 @@
     "build": "npm run client:build",
     "start": "cd server && npm start",
     "heroku-postbuild": "npm run install:all && npm run client:build",
-    "postinstall": "npm install --prefix server && npm install --prefix client && npm run client:build",
+    "postinstall": "cd server && npm install && cd ../client && npm install && npm run build",
     "railway:install": "npm install && npm install --prefix server && npm install --prefix client",
     "railway:build": "npm run client:build",
     "railway:build": "npm run install:all && npm run client:build",
@@ -33,24 +33,12 @@
   ],
   "author": "SpineLine Team",
   "license": "ISC",
-  "dependencies": {
-    "archiver": "^7.0.1",
-    "bcrypt": "^5.1.1",
-    "cors": "^2.8.5",
-    "csv-parser": "^3.2.0",
-    "dotenv": "^16.3.1",
-    "express": "^4.18.2",
-    "formidable": "^3.5.4",
-    "jsonwebtoken": "^9.0.2",
-    "mongoose": "^8.0.3",
-    "multer": "^2.0.0",
-    "nodemailer": "^7.0.3",
-    "puppeteer": "^24.9.0",
-    "react-signature-canvas": "^1.1.0-alpha.2",
-    "xlsx": "^0.18.5",
-    "yauzl": "^3.2.0"
-  },
+  "dependencies": {},
   "devDependencies": {
     "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": "18.x",
+    "npm": "9.x"
   }
 }
