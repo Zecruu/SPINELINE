@@ -16,7 +16,6 @@
     "postinstall": "cd server && npm install && cd ../client && npm install && npm run build",
     "railway:install": "npm install && npm install --prefix server && npm install --prefix client",
     "railway:build": "npm run client:build",
-    "railway:build": "npm run install:all && npm run client:build",
     "railway:start": "npm run server:start",
     "test": "echo \"Error: no test specified\" && exit 1",
     "test:admin": "node scripts/test-admin.js",
@@ -38,7 +37,7 @@
     "concurrently": "^8.2.2"
   },
   "engines": {
-    "node": "18.x",
-    "npm": "9.x"
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
   }
 }
