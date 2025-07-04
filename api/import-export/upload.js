@@ -138,11 +138,12 @@ export default async function handler(req, res) {
     const user = verifyToken(req);
     await connectDB();
 
-    // Parse form data
+    // Parse form data with Vercel-compatible limits
     const form = formidable({
-      maxFileSize: 500 * 1024 * 1024, // 500MB
+      maxFileSize: 50 * 1024 * 1024, // 50MB limit for Vercel
       uploadDir: '/tmp',
-      keepExtensions: true
+      keepExtensions: true,
+      maxFieldsSize: 50 * 1024 * 1024
     });
 
     const [fields, files] = await form.parse(req);
@@ -213,6 +214,22 @@ export default async function handler(req, res) {
       return res.status(401).json({
         success: false,
         message: 'Authentication required'
+      });
+    }
+
+    // Handle file size errors
+    if (error.code === 'LIMIT_FILE_SIZE' || error.message.includes('maxFileSize')) {
+      return res.status(413).json({
+        success: false,
+        message: 'File too large. Maximum size is 50MB for Vercel deployment. Please use a smaller file or contact support for larger imports.'
+      });
+    }
+
+    // Handle formidable errors
+    if (error.code === 'ENOENT' || error.message.includes('no such file')) {
+      return res.status(400).json({
+        success: false,
+        message: 'File upload failed. Please try again.'
       });
     }
 

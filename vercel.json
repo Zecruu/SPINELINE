@@ -4,8 +4,12 @@
   "outputDirectory": "client/dist",
   "functions": {
     "api/**/*.js": {
-      "maxDuration": 30
+      "maxDuration": 60,
+      "memory": 1024
     }
+  },
+  "limits": {
+    "duration": 60000
   },
   "rewrites": [
     {

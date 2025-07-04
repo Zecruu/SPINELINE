@@ -165,10 +165,10 @@ const ImportExport = () => {
         return;
       }
 
-      // Validate file size (500MB for ChiroTouch, 10MB for others)
-      const maxSize = importType === 'chirotouch-full' ? 500 * 1024 * 1024 : 10 * 1024 * 1024;
+      // Validate file size (50MB for ChiroTouch on Vercel, 10MB for others)
+      const maxSize = importType === 'chirotouch-full' ? 50 * 1024 * 1024 : 10 * 1024 * 1024;
       if (file.size > maxSize) {
-        setError(`File too large. Maximum size is ${importType === 'chirotouch-full' ? '500MB' : '10MB'}.`);
+        setError(`File too large. Maximum size is ${importType === 'chirotouch-full' ? '50MB' : '10MB'} due to Vercel deployment limits.`);
         return;
       }
 
@@ -247,10 +247,10 @@ const ImportExport = () => {
     const file = event.target.files[0];
     if (!file) return;
 
-    // Validate file size (500MB for ChiroTouch, 10MB for others)
-    const maxSize = importType === 'chirotouch-full' ? 500 * 1024 * 1024 : 10 * 1024 * 1024;
+    // Validate file size (50MB for ChiroTouch on Vercel, 10MB for others)
+    const maxSize = importType === 'chirotouch-full' ? 50 * 1024 * 1024 : 10 * 1024 * 1024;
     if (file.size > maxSize) {
-      setError(`File too large. Maximum size is ${importType === 'chirotouch-full' ? '500MB' : '10MB'}.`);
+      setError(`File too large. Maximum size is ${importType === 'chirotouch-full' ? '50MB' : '10MB'} due to Vercel deployment limits.`);
       return;
     }
 
@@ -663,7 +663,7 @@ const ImportExport = () => {
                       <span> or drag and drop</span>
                     </div>
                     <p className="text-xs text-gray-500">
-                      {importType === 'chirotouch-full' ? 'ZIP files only (max 500MB)' : 'CSV or XLSX files only'}
+                      {importType === 'chirotouch-full' ? 'ZIP files only (max 50MB)' : 'CSV or XLSX files only (max 10MB)'}
                     </p>
                     <input
                       id="file-upload"
