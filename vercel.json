@@ -3,7 +3,16 @@
   "name": "spineline",
   "buildCommand": "cd client && npm ci && npm run build",
   "outputDirectory": "client/dist",
+  "functions": {
+    "api/index.js": {
+      "maxDuration": 30
+    }
+  },
   "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api"
+    },
     {
       "source": "/secret-admin/(.*)",
       "destination": "/index.html"
