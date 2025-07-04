@@ -22,7 +22,13 @@ process.on('unhandledRejection', (reason, promise) => {
 
 // Middleware
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:7890',
+  origin: [
+    process.env.CLIENT_URL || 'http://localhost:7890',
+    process.env.RAILWAY_STATIC_URL,
+    process.env.FRONTEND_URL,
+    'https://*.railway.app',
+    'https://*.up.railway.app'
+  ].filter(Boolean),
   credentials: true
 }));
 
@@ -60,6 +66,19 @@ app.get('/api/health', (req, res) => {
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     environment: process.env.NODE_ENV || 'development'
+  });
+});
+
+// Health check endpoint for Railway
+app.get('/api/health', (req, res) => {
+  res.status(200).json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV || 'development',
+    platform: process.env.RAILWAY_ENVIRONMENT ? 'Railway' : 'Other',
+    memory: process.memoryUsage(),
+    version: '1.0.0'
   });
 });
 
@@ -123,7 +142,14 @@ app.use('*', (req, res) => {
 });
 
 const PORT = process.env.PORT || 5001;
+const HOST = process.env.HOST || '0.0.0.0';
 
-app.listen(PORT, () => {
-  console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
+app.listen(PORT, HOST, () => {
+  console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on ${HOST}:${PORT}`);
+
+  // Railway-specific logging
+  if (process.env.RAILWAY_ENVIRONMENT) {
+    console.log(`🚂 Railway Environment: ${process.env.RAILWAY_ENVIRONMENT}`);
+    console.log(`🌐 Railway URL: ${process.env.RAILWAY_STATIC_URL || 'Not set'}`);
+  }
 });
