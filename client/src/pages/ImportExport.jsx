@@ -54,6 +54,10 @@ const ImportExport = () => {
   // Drag and drop states
   const [isDragOver, setIsDragOver] = useState(false);
 
+  // Progress tracking states
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [processingProgress, setProcessingProgress] = useState(0);
+
   useEffect(() => {
     const userData = localStorage.getItem('user');
     if (userData) {
@@ -180,11 +184,23 @@ const ImportExport = () => {
     setLoading(true);
     setError('');
     setSuccess('');
+    setUploadProgress(0);
 
     try {
       const formData = new FormData();
       formData.append('importFile', file);
       formData.append('type', importType);
+
+      // Simulate upload progress
+      const progressInterval = setInterval(() => {
+        setUploadProgress(prev => {
+          if (prev >= 90) {
+            clearInterval(progressInterval);
+            return 90; // Stop at 90% until response
+          }
+          return prev + 10;
+        });
+      }, 200);
 
       const token = localStorage.getItem('userToken');
       const response = await fetch('/api/import-export/upload', {
@@ -194,6 +210,9 @@ const ImportExport = () => {
         },
         body: formData
       });
+
+      clearInterval(progressInterval);
+      setUploadProgress(100);
 
       const result = await response.json();
 
@@ -275,8 +294,20 @@ const ImportExport = () => {
     setLoading(true);
     setError('');
     setImportStep(4);
+    setProcessingProgress(0);
 
     try {
+      // Simulate processing progress
+      const progressInterval = setInterval(() => {
+        setProcessingProgress(prev => {
+          if (prev >= 80) {
+            clearInterval(progressInterval);
+            return 80; // Stop at 80% until response
+          }
+          return prev + 15;
+        });
+      }, 500);
+
       const token = localStorage.getItem('userToken');
       const response = await fetch('/api/import-export/process', {
         method: 'POST',
@@ -296,6 +327,9 @@ const ImportExport = () => {
           fileSize: selectedFile?.size
         })
       });
+
+      clearInterval(progressInterval);
+      setProcessingProgress(100);
 
       const result = await response.json();
 
@@ -326,6 +360,8 @@ const ImportExport = () => {
     setIsChirotouch(false);
     setChirotouchStructure(null);
     setIsDragOver(false);
+    setUploadProgress(0);
+    setProcessingProgress(0);
     setSelectedDatasets({
       patients: true,
       appointments: true,
@@ -657,6 +693,26 @@ const ImportExport = () => {
                           <XCircleIcon className="h-5 w-5" />
                         </button>
                       </div>
+
+                      {/* Show upload progress when loading */}
+                      {loading && !importPreview && (
+                        <div className="mt-3 pt-3 border-t border-gray-500">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="text-xs text-gray-300">
+                              <span>📤 Uploading file...</span>
+                            </div>
+                            <span className="text-xs text-gray-400">
+                              {uploadProgress}%
+                            </span>
+                          </div>
+                          <div className="bg-gray-600 rounded-full h-1.5">
+                            <div
+                              className="bg-green-600 h-1.5 rounded-full transition-all duration-300"
+                              style={{ width: `${uploadProgress}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                      )}
 
                       {/* Show Initiate Import button for uploaded files */}
                       {!loading && !importPreview && (
@@ -1030,9 +1086,15 @@ const ImportExport = () => {
                           : `Processing ${importPreview?.totalRows} records...`
                         }
                       </span>
+                      <span className="text-xs text-gray-400">
+                        {processingProgress}%
+                      </span>
                     </div>
                     <div className="mt-4 bg-gray-600 rounded-full h-2">
-                      <div className="bg-blue-600 h-2 rounded-full transition-all duration-300" style={{ width: '75%' }}></div>
+                      <div
+                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${processingProgress}%` }}
+                      ></div>
                     </div>
                   </div>
                 )}
