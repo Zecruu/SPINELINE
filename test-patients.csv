@@ -1,0 +1,6 @@
+firstName,lastName,email,phone,dateOfBirth,address,city,state,zipCode
+John,Doe,john.doe@email.com,555-0101,1985-03-15,123 Main St,Anytown,CA,90210
+Jane,Smith,jane.smith@email.com,555-0102,1990-07-22,456 Oak Ave,Somewhere,NY,10001
+Bob,Johnson,bob.johnson@email.com,555-0103,1978-11-08,789 Pine Rd,Elsewhere,TX,75001
+Alice,Williams,alice.williams@email.com,555-0104,1982-05-30,321 Elm St,Nowhere,FL,33101
+Charlie,Brown,charlie.brown@email.com,555-0105,1995-12-03,654 Maple Dr,Anywhere,WA,98001

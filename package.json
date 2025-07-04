@@ -2,7 +2,7 @@
   "name": "spineline",
   "version": "1.0.0",
   "description": "SpineLine - Chiropractic Clinic Management Platform",
-  "main": "api/index.js",
+  "main": "server/server.js",
   "scripts": {
     "dev": "concurrently \"npm run server:dev\" \"npm run client:dev\"",
     "server:dev": "cd server && npm run dev",

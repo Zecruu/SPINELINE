@@ -213,3 +213,5 @@ Supported file types in ZIP:
     });
   }
 }
+
+export default handler;
