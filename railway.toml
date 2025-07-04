@@ -11,3 +11,5 @@ restartPolicyMaxRetries = 3
 
 [variables]
 NODE_ENV = "production"
+MONGO_URI = "mongodb+srv://nomnk5138:Redzone12@spinev0.zbqy7hv.mongodb.net/spineline?retryWrites=true&w=majority"
+JWT_SECRET = "spineline-jwt-secret-2024"
