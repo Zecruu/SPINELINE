@@ -423,5 +423,8 @@ app.use('*', (req, res) => {
   res.status(404).json({ message: 'API route not found' });
 });
 
-// Export the Express app as a serverless function
+// Export the Express app as a serverless function for Vercel
 module.exports = app;
+
+// Also export as default for Vercel compatibility
+module.exports.default = app;
