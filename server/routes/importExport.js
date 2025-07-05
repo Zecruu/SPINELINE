@@ -940,6 +940,11 @@ router.post('/process-chirotouch', verifyToken, async (req, res) => {
     });
 
     try {
+      console.log('🚀 Starting ChiroTouch import processing...');
+
+      // Set a longer timeout for large imports
+      req.setTimeout(10 * 60 * 1000); // 10 minutes
+
       const result = await processChirotouchFullImport(structure, extractPath, clinicId, userName, selectedDatasets);
 
       // Update import history
@@ -1404,6 +1409,9 @@ async function processChirotouchFullImport(structure, extractPath, clinicId, cre
   };
 
   try {
+    console.log('🔍 Starting ChiroTouch data processing...');
+    console.log('📋 Selected datasets:', selectedDatasets);
+
     // Process patients from 00_Tables if selected
     if (selectedDatasets.patients !== false) {
       console.log('👥 Processing patients...');
@@ -1411,28 +1419,59 @@ async function processChirotouchFullImport(structure, extractPath, clinicId, cre
         f.fileName.toLowerCase().includes('patient') && f.fileName.endsWith('.csv')
       );
 
+      console.log(`📄 Found ${patientFiles.length} patient files:`, patientFiles.map(f => f.fileName));
+
       for (const file of patientFiles) {
         try {
           const data = await parseCSVFile(file.filePath);
           let fileSuccessCount = 0;
           let fileErrorCount = 0;
 
-          for (const row of data) {
-            try {
-              // Map ChiroTouch patient fields to SpineLine format
-              const mappedData = mapChirotouchPatient(row);
-              await processPatientImport(mappedData, clinicId, createdBy, result.duplicates);
-              fileSuccessCount++;
-              result.summary.successCount++;
-            } catch (error) {
-              fileErrorCount++;
-              result.summary.errorCount++;
-              result.errors.push({
-                fileName: file.fileName,
-                errorMessage: error.message,
-                data: row,
-                timestamp: new Date()
-              });
+          console.log(`📊 File ${file.fileName} contains ${data.length} patient records`);
+
+          // Safety limit for very large datasets
+          const MAX_PATIENTS_PER_IMPORT = 10000; // Limit to 10k patients per import
+          if (data.length > MAX_PATIENTS_PER_IMPORT) {
+            console.log(`⚠️ Large dataset detected (${data.length} patients). Processing first ${MAX_PATIENTS_PER_IMPORT} patients.`);
+            result.warnings.push({
+              type: 'large_dataset',
+              message: `Dataset contains ${data.length} patients. Only processing first ${MAX_PATIENTS_PER_IMPORT} patients to prevent server overload. Please split your data into smaller files.`,
+              fileName: file.fileName,
+              timestamp: new Date()
+            });
+            data.splice(MAX_PATIENTS_PER_IMPORT); // Trim to safe size
+          }
+
+          // Process data in batches to avoid memory issues
+          const BATCH_SIZE = 100; // Process 100 patients at a time
+          console.log(`📊 Processing ${data.length} patients in batches of ${BATCH_SIZE}...`);
+
+          for (let i = 0; i < data.length; i += BATCH_SIZE) {
+            const batch = data.slice(i, i + BATCH_SIZE);
+            console.log(`📦 Processing batch ${Math.floor(i/BATCH_SIZE) + 1}/${Math.ceil(data.length/BATCH_SIZE)} (${batch.length} patients)`);
+
+            for (const row of batch) {
+              try {
+                // Map ChiroTouch patient fields to SpineLine format
+                const mappedData = mapChirotouchPatient(row);
+                await processPatientImport(mappedData, clinicId, createdBy, result.duplicates);
+                fileSuccessCount++;
+                result.summary.successCount++;
+              } catch (error) {
+                fileErrorCount++;
+                result.summary.errorCount++;
+                result.errors.push({
+                  fileName: file.fileName,
+                  errorMessage: error.message,
+                  data: row,
+                  timestamp: new Date()
+                });
+              }
+            }
+
+            // Small delay between batches to prevent overwhelming the database
+            if (i + BATCH_SIZE < data.length) {
+              await new Promise(resolve => setTimeout(resolve, 100));
             }
           }
 
