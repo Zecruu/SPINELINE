@@ -941,9 +941,22 @@ router.post('/process-chirotouch', verifyToken, async (req, res) => {
 
     try {
       console.log('🚀 Starting ChiroTouch import processing...');
+      console.log('📊 Memory usage before import:', process.memoryUsage());
 
       // Set a longer timeout for large imports
-      req.setTimeout(10 * 60 * 1000); // 10 minutes
+      req.setTimeout(15 * 60 * 1000); // 15 minutes
+
+      // Add response timeout handling
+      res.setTimeout(15 * 60 * 1000, () => {
+        console.error('❌ Response timeout after 15 minutes');
+        if (!res.headersSent) {
+          res.status(504).json({
+            success: false,
+            message: 'Import processing timeout - dataset too large. Please split your data into smaller files.',
+            timeout: true
+          });
+        }
+      });
 
       const result = await processChirotouchFullImport(structure, extractPath, clinicId, userName, selectedDatasets);
 
@@ -1541,6 +1554,10 @@ async function processChirotouchFullImport(structure, extractPath, clinicId, cre
   try {
     console.log('🔍 Starting ChiroTouch data processing...');
     console.log('📋 Selected datasets:', selectedDatasets);
+    console.log('💾 Initial memory usage:', {
+      rss: Math.round(process.memoryUsage().rss / 1024 / 1024) + 'MB',
+      heapUsed: Math.round(process.memoryUsage().heapUsed / 1024 / 1024) + 'MB'
+    });
 
     // Process all 00_Tables data systematically (relational data first)
     console.log('📂 Processing 00_Tables relational data...');
@@ -1565,21 +1582,28 @@ async function processChirotouchFullImport(structure, extractPath, clinicId, cre
 
           console.log(`📊 File ${file.fileName} contains ${data.length} patient records`);
 
-          // Safety limit for very large datasets
-          const MAX_PATIENTS_PER_IMPORT = 10000; // Limit to 10k patients per import
+          // Safety limit for very large datasets - start with test mode
+          const MAX_PATIENTS_PER_IMPORT = 100; // Start with 100 patients for testing
           if (data.length > MAX_PATIENTS_PER_IMPORT) {
             console.log(`⚠️ Large dataset detected (${data.length} patients). Processing first ${MAX_PATIENTS_PER_IMPORT} patients.`);
             result.warnings.push({
               type: 'large_dataset',
-              message: `Dataset contains ${data.length} patients. Only processing first ${MAX_PATIENTS_PER_IMPORT} patients to prevent server overload. Please split your data into smaller files.`,
+              message: `Dataset contains ${data.length} patients. Only processing first ${MAX_PATIENTS_PER_IMPORT} patients to prevent server overload. Please split your data into smaller files for complete import.`,
               fileName: file.fileName,
               timestamp: new Date()
             });
             data.splice(MAX_PATIENTS_PER_IMPORT); // Trim to safe size
           }
 
-          // Process data in batches to avoid memory issues
-          const BATCH_SIZE = 100; // Process 100 patients at a time
+          // Monitor memory usage
+          const memBefore = process.memoryUsage();
+          console.log(`💾 Memory before processing ${file.fileName}:`, {
+            rss: Math.round(memBefore.rss / 1024 / 1024) + 'MB',
+            heapUsed: Math.round(memBefore.heapUsed / 1024 / 1024) + 'MB'
+          });
+
+          // Process data in smaller batches to avoid memory issues
+          const BATCH_SIZE = 50; // Process 50 patients at a time for stability
           console.log(`📊 Processing ${data.length} patients in batches of ${BATCH_SIZE}...`);
 
           for (let i = 0; i < data.length; i += BATCH_SIZE) {
@@ -1605,9 +1629,35 @@ async function processChirotouchFullImport(structure, extractPath, clinicId, cre
               }
             }
 
-            // Small delay between batches to prevent overwhelming the database
+            // Memory cleanup and delay between batches
             if (i + BATCH_SIZE < data.length) {
-              await new Promise(resolve => setTimeout(resolve, 100));
+              // Force garbage collection if available
+              if (global.gc) {
+                global.gc();
+              }
+
+              // Monitor memory usage and circuit breaker
+              const memAfterBatch = process.memoryUsage();
+              const memUsedMB = Math.round(memAfterBatch.heapUsed / 1024 / 1024);
+              console.log(`💾 Memory after batch ${Math.floor(i/BATCH_SIZE) + 1}:`, {
+                rss: Math.round(memAfterBatch.rss / 1024 / 1024) + 'MB',
+                heapUsed: memUsedMB + 'MB'
+              });
+
+              // Circuit breaker: Stop if memory usage gets too high
+              if (memUsedMB > 1500) { // Stop if heap usage exceeds 1.5GB
+                console.log(`🚨 Memory limit reached (${memUsedMB}MB). Stopping import to prevent crash.`);
+                result.warnings.push({
+                  type: 'memory_limit',
+                  message: `Import stopped due to high memory usage (${memUsedMB}MB). ${fileSuccessCount} patients imported successfully. Please split your data into smaller files.`,
+                  fileName: file.fileName,
+                  timestamp: new Date()
+                });
+                break; // Stop processing this file
+              }
+
+              // Longer delay between batches for stability
+              await new Promise(resolve => setTimeout(resolve, 500));
             }
           }
 
