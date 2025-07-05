@@ -53,9 +53,9 @@ const verifyAdmin = async (req, res, next) => {
     console.log('Token decoded successfully:', decoded);
     req.user = decoded;
 
-    // Check if user has admin role
-    if (req.user.role !== 'admin') {
-      console.log('User role is not admin:', req.user.role);
+    // Check if user has admin role (accept both 'admin' and 'super_admin')
+    if (req.user.role !== 'admin' && req.user.role !== 'super_admin') {
+      console.log('User role is not admin or super_admin:', req.user.role);
       return res.status(403).json({
         success: false,
         message: 'Access denied. Admin privileges required.'
