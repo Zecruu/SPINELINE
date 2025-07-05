@@ -169,24 +169,65 @@ const detectChirotouchStructure = (extractedFiles) => {
     chartNotes: /^(03_ChartNotes|ChartNotes|Chart|Notes)\//i
   };
 
+  console.log(`🔍 Analyzing ${extractedFiles.length} extracted files for ChiroTouch structure...`);
+
   extractedFiles.forEach(file => {
+    console.log(`📄 File: ${file.fileName} (${file.size} bytes)`);
+
     Object.entries(folderPatterns).forEach(([key, pattern]) => {
       if (pattern.test(file.fileName)) {
         structure.folders[key].push(file);
-        console.log(`📁 Detected ${key} file: ${file.fileName}`);
+        console.log(`  ✅ Matched ${key} pattern: ${file.fileName}`);
       }
     });
   });
 
-  // Log detection results
-  console.log('📊 ChiroTouch structure detection results:');
+  // Log detection results with details
+  console.log('\n📊 ChiroTouch structure detection results:');
   Object.entries(structure.folders).forEach(([key, files]) => {
-    console.log(`  ${key}: ${files.length} files`);
+    console.log(`  📁 ${key}: ${files.length} files`);
+    if (files.length > 0 && files.length <= 5) {
+      files.forEach(f => console.log(`    - ${path.basename(f.fileName)}`));
+    } else if (files.length > 5) {
+      files.slice(0, 3).forEach(f => console.log(`    - ${path.basename(f.fileName)}`));
+      console.log(`    ... and ${files.length - 3} more files`);
+    }
   });
+
+  // If no chart notes found in expected folder, look for PDFs that might be chart notes
+  if (structure.folders.chartNotes.length === 0) {
+    console.log('🔍 No files found in standard ChartNotes folder, searching for chart note PDFs...');
+
+    const potentialChartNotes = extractedFiles.filter(file => {
+      const fileName = file.fileName.toLowerCase();
+      const ext = path.extname(fileName);
+
+      // Look for PDFs that might be chart notes based on naming patterns
+      return ext === '.pdf' && (
+        fileName.includes('chart') ||
+        fileName.includes('note') ||
+        fileName.includes('soap') ||
+        fileName.includes('visit') ||
+        fileName.includes('progress') ||
+        // ChiroTouch sometimes names files with patient info
+        /patient.*\d+.*\.pdf$/i.test(fileName) ||
+        // Or just any PDF in a notes-like folder
+        /notes?|chart/i.test(path.dirname(fileName))
+      );
+    });
+
+    if (potentialChartNotes.length > 0) {
+      console.log(`📋 Found ${potentialChartNotes.length} potential chart note files outside standard folder`);
+      structure.folders.chartNotes.push(...potentialChartNotes);
+    }
+  }
 
   // Determine if this is a valid ChiroTouch export
   structure.isChirotouch = structure.folders.tables.length > 0 ||
-                          structure.folders.ledgerHistory.length > 0;
+                          structure.folders.ledgerHistory.length > 0 ||
+                          structure.folders.chartNotes.length > 0;
+
+  console.log(`\n🏥 ChiroTouch export detected: ${structure.isChirotouch}`);
 
   return structure;
 };
@@ -269,21 +310,26 @@ const processChirotouchPreview = async (structure, extractPath) => {
       }
     }
 
-    // Count chart notes (PDFs/TXT files) - filter for actual chart note files
+    // Count chart notes - ChiroTouch exports have one PDF per patient with all notes
     const chartNoteFiles = structure.folders.chartNotes.filter(f => {
       const fileName = f.fileName.toLowerCase();
       const ext = path.extname(fileName);
-      // Include PDF, TXT, DOC, DOCX files that look like chart notes
-      return ['.pdf', '.txt', '.doc', '.docx', '.rtf'].includes(ext) &&
-             (fileName.includes('chart') || fileName.includes('note') || fileName.includes('soap') ||
-              fileName.includes('visit') || fileName.includes('progress') || ext === '.pdf' || ext === '.txt');
+      // ChiroTouch chart notes are typically PDFs in 03_ChartNotes folder
+      // Each PDF contains all chart notes for one patient chronologically
+      return ext === '.pdf' || ext === '.txt' || ext === '.doc' || ext === '.docx' || ext === '.rtf';
+    });
+
+    console.log(`📋 Found ${chartNoteFiles.length} chart note files in ChiroTouch export`);
+    chartNoteFiles.forEach(f => {
+      console.log(`  - ${path.basename(f.fileName)} (${f.size} bytes)`);
     });
 
     preview.chartNotes.count = chartNoteFiles.length;
     preview.chartNotes.files = chartNoteFiles.slice(0, 10).map(f => ({
       fileName: path.basename(f.fileName),
       size: f.size,
-      type: path.extname(f.fileName).toLowerCase()
+      type: path.extname(f.fileName).toLowerCase(),
+      description: 'Patient chart notes archive'
     }));
     preview.summary.totalChartNotes = chartNoteFiles.length;
 
