@@ -1728,4 +1728,6 @@ function extractPatientIdFromFilename(fileName) {
 
 console.log('✅ ImportExport route loaded successfully');
 
+// Export the router and helper functions
 module.exports = router;
+module.exports.processChirotouchFullImport = processChirotouchFullImport;

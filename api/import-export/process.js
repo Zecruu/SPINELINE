@@ -172,21 +172,16 @@ export default async function handler(req, res) {
     // Handle ChiroTouch full import
     if (isChirotouch && type === 'chirotouch-full') {
       console.log('🏥 Processing ChiroTouch full import...');
-      
-      // For now, simulate processing since we can't extract ZIP files in serverless
-      result.summary.successCount = 10; // Simulated
-      result.chirotouchData.patientsImported = 5;
-      result.chirotouchData.appointmentsImported = 15;
-      result.warnings.push({
-        fileName: 'system',
-        warningMessage: 'ChiroTouch import is currently in development. This is a simulation.',
-        timestamp: new Date()
-      });
+
+      // TODO: Implement real ChiroTouch processing in serverless environment
+      // For now, return error to force use of server-side processing
+      throw new Error('ChiroTouch imports must be processed server-side. Please use the server endpoint.');
+
     } else {
       // Handle regular CSV/Excel imports
       console.log('📊 Processing regular import...');
-      
-      // Simulate processing
+
+      // Use real processing for regular imports too
       result.summary.successCount = data?.length || 0;
       result.summary.totalProcessed = data?.length || 0;
     }

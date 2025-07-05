@@ -325,7 +325,13 @@ const ImportExport = () => {
       }, 500);
 
       const token = localStorage.getItem('userToken');
-      const response = await fetch('/api/import-export/process', {
+
+      // Use different endpoints for ChiroTouch vs regular imports
+      const endpoint = isChirotouch
+        ? '/server/import-export/process'  // Server-side for ChiroTouch
+        : '/api/import-export/process';    // API for regular imports
+
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
