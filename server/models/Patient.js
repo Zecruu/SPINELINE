@@ -419,7 +419,66 @@ const patientSchema = new mongoose.Schema({
   profilePic: {
     type: String,
     trim: true
-  }
+  },
+
+  // ChiroTouch Import Identifiers (for cross-referencing)
+  chirotouchAccountNo: {
+    type: String,
+    trim: true
+  },
+  chirotouchPatientId: {
+    type: String,
+    trim: true
+  },
+  chirotouchClientId: {
+    type: String,
+    trim: true
+  },
+
+  // Historical SOAP Notes (imported from ChiroTouch chart notes)
+  historicalSOAP: [{
+    visitDate: {
+      type: Date,
+      required: true
+    },
+    provider: {
+      type: String,
+      trim: true
+    },
+    subjective: {
+      type: String,
+      trim: true
+    },
+    objective: {
+      type: String,
+      trim: true
+    },
+    assessment: {
+      type: String,
+      trim: true
+    },
+    plan: {
+      type: String,
+      trim: true
+    },
+    painScale: {
+      type: Number,
+      min: 0,
+      max: 10
+    },
+    source: {
+      type: String,
+      default: 'ChiroTouch Import'
+    },
+    originalFileName: {
+      type: String,
+      trim: true
+    },
+    importedAt: {
+      type: Date,
+      default: Date.now
+    }
+  }]
 });
 
 // Indexes for better performance
@@ -428,6 +487,10 @@ patientSchema.index({ clinicId: 1, email: 1 });
 patientSchema.index({ clinicId: 1, phone: 1 });
 patientSchema.index({ clinicId: 1, lastName: 1, firstName: 1 });
 patientSchema.index({ clinicId: 1, status: 1 });
+// ChiroTouch identifier indexes for cross-referencing
+patientSchema.index({ clinicId: 1, chirotouchAccountNo: 1 });
+patientSchema.index({ clinicId: 1, chirotouchPatientId: 1 });
+patientSchema.index({ clinicId: 1, chirotouchClientId: 1 });
 
 // Pre-save middleware to update timestamps and calculate derived fields
 patientSchema.pre('save', function(next) {

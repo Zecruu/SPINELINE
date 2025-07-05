@@ -1190,6 +1190,131 @@ async function processPatientImport(data, clinicId, createdBy, duplicates) {
   await patient.save();
 }
 
+// Helper function to process provider import
+async function processProviderImport(data, clinicId, createdBy) {
+  // Check for duplicates by NPI or email
+  const existing = await User.findOne({
+    clinicId,
+    role: 'doctor',
+    $or: [
+      { npiNumber: data.npiNumber },
+      { name: data.fullName },
+      { email: data.email }
+    ]
+  });
+
+  if (existing) {
+    console.log(`⚠️ Provider already exists: ${data.fullName} (${data.npiNumber})`);
+    return; // Skip duplicate
+  }
+
+  // Generate a temporary password for imported providers
+  const bcrypt = require('bcrypt');
+  const tempPassword = 'ChiroTouch2024!'; // Default password for imported providers
+  const hashedPassword = await bcrypt.hash(tempPassword, 12);
+
+  // Create provider record using User model
+  const providerData = {
+    name: data.fullName,
+    email: data.email || `${data.firstName.toLowerCase()}.${data.lastName.toLowerCase()}@${clinicId.toLowerCase()}.temp`,
+    passwordHash: hashedPassword,
+    role: 'doctor',
+    clinicId,
+    isActive: true,
+    firstName: data.firstName,
+    lastName: data.lastName,
+    phone: data.phone,
+    npiNumber: data.npiNumber,
+    licenseNumber: data.licenseNumber,
+    specialty: data.specialty,
+    // Store ChiroTouch identifiers for cross-referencing
+    chirotouchProviderId: data.chirotouchProviderId,
+    chirotouchDoctorId: data.chirotouchDoctorId,
+    imported: true,
+    importSource: 'ChiroTouch Import',
+    importedAt: new Date()
+  };
+
+  const provider = new User(providerData);
+  await provider.save();
+  console.log(`✅ Provider imported: ${data.fullName} (${data.npiNumber})`);
+}
+
+// Helper function to process insurance import
+async function processInsuranceImport(data, clinicId, createdBy) {
+  // Find patient using enhanced matching
+  const patient = await Patient.findOne({
+    clinicId,
+    $or: [
+      { recordNumber: data.patientRecordNumber },
+      { chirotouchAccountNo: data.patientRecordNumber },
+      { chirotouchPatientId: data.patientRecordNumber },
+      { chirotouchClientId: data.patientRecordNumber }
+    ]
+  });
+
+  if (!patient) {
+    throw new Error(`Patient not found for insurance: ${data.patientRecordNumber}`);
+  }
+
+  // Create insurance record
+  const insuranceData = {
+    provider: data.insuranceProvider,
+    policyNumber: data.policyNumber,
+    groupNumber: data.groupNumber,
+    subscriberName: data.subscriberName,
+    relationship: data.relationship,
+    copay: parseFloat(data.copay) || 0,
+    deductible: parseFloat(data.deductible) || 0,
+    effectiveDate: data.effectiveDate ? new Date(data.effectiveDate) : null,
+    terminationDate: data.terminationDate ? new Date(data.terminationDate) : null,
+    isPrimary: data.isPrimary === 'true' || data.isPrimary === true,
+    importedFrom: 'ChiroTouch',
+    importedAt: new Date()
+  };
+
+  // Add to patient's insurance array
+  if (!patient.insurances) {
+    patient.insurances = [];
+  }
+
+  patient.insurances.push(insuranceData);
+  await patient.save();
+
+  console.log(`✅ Insurance imported for patient: ${patient.fullName}`);
+}
+
+// Helper function to process diagnosis import
+async function processDiagnosisImport(data, clinicId, createdBy) {
+  // Check for duplicate diagnosis codes
+  const existing = await DiagnosticCode.findOne({
+    clinicId,
+    code: data.code
+  });
+
+  if (existing) {
+    console.log(`⚠️ Diagnosis code already exists: ${data.code}`);
+    return; // Skip duplicate
+  }
+
+  // Create diagnosis code record
+  const diagnosisData = {
+    code: data.code,
+    description: data.description,
+    category: data.category,
+    isActive: data.isActive === 'true' || data.isActive === true,
+    clinicId,
+    createdBy,
+    imported: true,
+    importSource: 'ChiroTouch Import',
+    importedAt: new Date()
+  };
+
+  const diagnosis = new DiagnosticCode(diagnosisData);
+  await diagnosis.save();
+  console.log(`✅ Diagnosis code imported: ${data.code} - ${data.description}`);
+}
+
 // Helper function to process appointment import
 async function processAppointmentImport(data, clinicId, createdBy) {
   // Find patient by record number
@@ -1304,10 +1429,15 @@ async function processIcdCodeImport(data, clinicId, createdBy, duplicates) {
 
 // Helper function to process ledger import
 async function processLedgerImport(data, clinicId, createdBy) {
-  // Find patient by record number
+  // Enhanced patient matching with AccountNo and ChiroTouch identifiers
   const patient = await Patient.findOne({
     clinicId,
-    recordNumber: data.patientRecordNumber
+    $or: [
+      { recordNumber: data.patientRecordNumber },
+      { chirotouchAccountNo: data.patientRecordNumber },
+      { chirotouchPatientId: data.patientRecordNumber },
+      { chirotouchClientId: data.patientRecordNumber }
+    ]
   });
 
   if (!patient) {
@@ -1412,11 +1542,17 @@ async function processChirotouchFullImport(structure, extractPath, clinicId, cre
     console.log('🔍 Starting ChiroTouch data processing...');
     console.log('📋 Selected datasets:', selectedDatasets);
 
-    // Process patients from 00_Tables if selected
+    // Process all 00_Tables data systematically (relational data first)
+    console.log('📂 Processing 00_Tables relational data...');
+
+    // Step 1: Process patients first (required for all other associations)
     if (selectedDatasets.patients !== false) {
       console.log('👥 Processing patients...');
       const patientFiles = structure.folders.tables.filter(f =>
-        f.fileName.toLowerCase().includes('patient') && f.fileName.endsWith('.csv')
+        (f.fileName.toLowerCase().includes('patient') ||
+         f.fileName.toLowerCase().includes('client') ||
+         f.fileName.toLowerCase().includes('account')) &&
+        f.fileName.endsWith('.csv')
       );
 
       console.log(`📄 Found ${patientFiles.length} patient files:`, patientFiles.map(f => f.fileName));
@@ -1496,7 +1632,134 @@ async function processChirotouchFullImport(structure, extractPath, clinicId, cre
       }
     }
 
-    // Process appointments from 00_Tables if selected
+    // Step 2: Process providers/doctors from 00_Tables
+    console.log('👨‍⚕️ Processing providers/doctors...');
+    const providerFiles = structure.folders.tables.filter(f =>
+      (f.fileName.toLowerCase().includes('provider') ||
+       f.fileName.toLowerCase().includes('doctor') ||
+       f.fileName.toLowerCase().includes('physician') ||
+       f.fileName.toLowerCase().includes('staff')) &&
+      f.fileName.endsWith('.csv')
+    );
+
+    for (const file of providerFiles) {
+      try {
+        const data = await parseCSVFile(file.filePath);
+        console.log(`👨‍⚕️ Processing ${data.length} providers from ${file.fileName}`);
+
+        for (const row of data) {
+          try {
+            const mappedData = mapChirotouchProvider(row);
+            await processProviderImport(mappedData, clinicId, createdBy);
+            result.summary.successCount++;
+          } catch (error) {
+            result.summary.errorCount++;
+            result.errors.push({
+              fileName: file.fileName,
+              errorMessage: error.message,
+              data: row,
+              timestamp: new Date()
+            });
+          }
+        }
+
+        result.chirotouchData.foldersProcessed.push({
+          folderName: '00_Tables/Providers',
+          fileCount: 1,
+          processedCount: data.length
+        });
+
+      } catch (error) {
+        result.warnings.push({
+          type: 'missing_file',
+          message: `Failed to process provider file: ${file.fileName}`,
+          fileName: file.fileName,
+          timestamp: new Date()
+        });
+      }
+    }
+
+    // Step 3: Process insurance data from 00_Tables
+    console.log('🏥 Processing insurance data...');
+    const insuranceFiles = structure.folders.tables.filter(f =>
+      (f.fileName.toLowerCase().includes('insurance') ||
+       f.fileName.toLowerCase().includes('coverage') ||
+       f.fileName.toLowerCase().includes('payer')) &&
+      f.fileName.endsWith('.csv')
+    );
+
+    for (const file of insuranceFiles) {
+      try {
+        const data = await parseCSVFile(file.filePath);
+        console.log(`🏥 Processing ${data.length} insurance records from ${file.fileName}`);
+
+        for (const row of data) {
+          try {
+            const mappedData = mapChirotouchInsurance(row);
+            await processInsuranceImport(mappedData, clinicId, createdBy);
+            result.summary.successCount++;
+          } catch (error) {
+            result.summary.errorCount++;
+            result.errors.push({
+              fileName: file.fileName,
+              errorMessage: error.message,
+              data: row,
+              timestamp: new Date()
+            });
+          }
+        }
+
+      } catch (error) {
+        result.warnings.push({
+          type: 'missing_file',
+          message: `Failed to process insurance file: ${file.fileName}`,
+          fileName: file.fileName,
+          timestamp: new Date()
+        });
+      }
+    }
+
+    // Step 4: Process diagnosis codes from 00_Tables
+    console.log('🔬 Processing diagnosis codes...');
+    const diagnosisFiles = structure.folders.tables.filter(f =>
+      (f.fileName.toLowerCase().includes('diagnosis') ||
+       f.fileName.toLowerCase().includes('icd') ||
+       f.fileName.toLowerCase().includes('condition')) &&
+      f.fileName.endsWith('.csv')
+    );
+
+    for (const file of diagnosisFiles) {
+      try {
+        const data = await parseCSVFile(file.filePath);
+        console.log(`🔬 Processing ${data.length} diagnosis codes from ${file.fileName}`);
+
+        for (const row of data) {
+          try {
+            const mappedData = mapChirotouchDiagnosis(row);
+            await processDiagnosisImport(mappedData, clinicId, createdBy);
+            result.summary.successCount++;
+          } catch (error) {
+            result.summary.errorCount++;
+            result.errors.push({
+              fileName: file.fileName,
+              errorMessage: error.message,
+              data: row,
+              timestamp: new Date()
+            });
+          }
+        }
+
+      } catch (error) {
+        result.warnings.push({
+          type: 'missing_file',
+          message: `Failed to process diagnosis file: ${file.fileName}`,
+          fileName: file.fileName,
+          timestamp: new Date()
+        });
+      }
+    }
+
+    // Step 5: Process appointments from 00_Tables if selected
     if (selectedDatasets.appointments !== false) {
       console.log('📅 Processing appointments...');
       const appointmentFiles = structure.folders.tables.filter(f =>
@@ -1628,8 +1891,61 @@ function mapChirotouchPatient(row) {
     city: row['City'] || row['city'] || '',
     state: row['State'] || row['state'] || '',
     zipCode: row['Zip'] || row['Zip Code'] || row['zip_code'] || '',
-    recordNumber: row['Patient ID'] || row['PatientID'] || row['Record Number'] || row['patient_id'] || '',
-    notes: row['Notes'] || row['notes'] || ''
+    // Enhanced patient ID mapping with AccountNo support for consistent cross-referencing
+    recordNumber: row['Patient ID'] || row['PatientID'] || row['Record Number'] || row['patient_id'] ||
+                  row['AccountNo'] || row['Account No'] || row['account_no'] ||
+                  row['ID'] || row['ClientID'] || row['client_id'] || '',
+    notes: row['Notes'] || row['notes'] || '',
+    // Store original ChiroTouch identifiers for cross-referencing
+    chirotouchAccountNo: row['AccountNo'] || row['Account No'] || row['account_no'] || '',
+    chirotouchPatientId: row['Patient ID'] || row['PatientID'] || row['patient_id'] || '',
+    chirotouchClientId: row['ClientID'] || row['client_id'] || ''
+  };
+}
+
+// Helper function to map ChiroTouch provider data to SpineLine format
+function mapChirotouchProvider(row) {
+  return {
+    firstName: row['First Name'] || row['FirstName'] || row['first_name'] || '',
+    lastName: row['Last Name'] || row['LastName'] || row['last_name'] || '',
+    fullName: row['Provider Name'] || row['Doctor Name'] || row['Name'] ||
+              `${row['First Name'] || ''} ${row['Last Name'] || ''}`.trim(),
+    npiNumber: row['NPI'] || row['NPI Number'] || row['npi_number'] || '',
+    licenseNumber: row['License'] || row['License Number'] || row['license_number'] || '',
+    specialty: row['Specialty'] || row['specialty'] || 'Chiropractic',
+    phone: row['Phone'] || row['phone'] || '',
+    email: row['Email'] || row['email'] || '',
+    // ChiroTouch provider identifiers for cross-referencing
+    chirotouchProviderId: row['Provider ID'] || row['ProviderID'] || row['provider_id'] || '',
+    chirotouchDoctorId: row['Doctor ID'] || row['DoctorID'] || row['doctor_id'] || ''
+  };
+}
+
+// Helper function to map ChiroTouch insurance data to SpineLine format
+function mapChirotouchInsurance(row) {
+  return {
+    patientRecordNumber: row['Patient ID'] || row['PatientID'] || row['patient_id'] ||
+                        row['AccountNo'] || row['Account No'] || row['account_no'] || '',
+    insuranceProvider: row['Insurance Provider'] || row['Provider'] || row['Payer'] || '',
+    policyNumber: row['Policy Number'] || row['Policy'] || row['policy_number'] || '',
+    groupNumber: row['Group Number'] || row['Group'] || row['group_number'] || '',
+    subscriberName: row['Subscriber Name'] || row['Subscriber'] || row['subscriber_name'] || '',
+    relationship: row['Relationship'] || row['relationship'] || 'Self',
+    copay: row['Copay'] || row['copay'] || '0',
+    deductible: row['Deductible'] || row['deductible'] || '0',
+    effectiveDate: row['Effective Date'] || row['Start Date'] || row['effective_date'] || '',
+    terminationDate: row['Termination Date'] || row['End Date'] || row['termination_date'] || '',
+    isPrimary: row['Primary'] || row['is_primary'] || 'true'
+  };
+}
+
+// Helper function to map ChiroTouch diagnosis data to SpineLine format
+function mapChirotouchDiagnosis(row) {
+  return {
+    code: row['ICD Code'] || row['Code'] || row['Diagnosis Code'] || row['icd_code'] || '',
+    description: row['Description'] || row['Diagnosis'] || row['description'] || '',
+    category: row['Category'] || row['Type'] || row['category'] || 'General',
+    isActive: row['Active'] || row['is_active'] || 'true'
   };
 }
 
@@ -1649,7 +1965,10 @@ function mapChirotouchAppointment(row) {
 // Helper function to map ChiroTouch ledger data to SpineLine format
 function mapChirotouchLedger(row) {
   return {
-    patientRecordNumber: row['Patient ID'] || row['PatientID'] || row['patient_id'] || '',
+    // Enhanced patient ID mapping with AccountNo support for consistent cross-referencing
+    patientRecordNumber: row['Patient ID'] || row['PatientID'] || row['patient_id'] ||
+                        row['AccountNo'] || row['Account No'] || row['account_no'] ||
+                        row['ClientID'] || row['client_id'] || '',
     transactionDate: row['Date'] || row['Transaction Date'] || row['transaction_date'] || '',
     transactionType: row['Type'] || row['Transaction Type'] || row['transaction_type'] || 'Payment',
     description: row['Description'] || row['description'] || '',
@@ -1679,11 +1998,14 @@ async function attachChartNotes(chartNoteFiles, clinicId, warnings) {
         continue;
       }
 
-      // Find patient by record number or name
+      // Enhanced patient matching with AccountNo and ChiroTouch identifiers
       const patient = await Patient.findOne({
         clinicId,
         $or: [
           { recordNumber: patientId },
+          { chirotouchAccountNo: patientId },
+          { chirotouchPatientId: patientId },
+          { chirotouchClientId: patientId },
           { firstName: { $regex: patientId, $options: 'i' } },
           { lastName: { $regex: patientId, $options: 'i' } }
         ]
@@ -1711,6 +2033,24 @@ async function attachChartNotes(chartNoteFiles, clinicId, warnings) {
 
       fs.copyFileSync(file.filePath, newFilePath);
 
+      // Parse SOAP data from chart note content (if it's a text-based file)
+      let soapParsed = false;
+      const fileExt = path.extname(fileName).toLowerCase();
+
+      if (fileExt === '.txt' || fileExt === '.rtf') {
+        try {
+          const content = fs.readFileSync(file.filePath, 'utf8');
+          const soapData = parseSOAPFromChartNote(content, fileName);
+
+          // Create historical SOAP record if we extracted meaningful data
+          if (soapData.subjective || soapData.objective || soapData.assessment || soapData.plan) {
+            soapParsed = await createHistoricalSOAP(patient, soapData, fileName);
+          }
+        } catch (error) {
+          console.error(`Error parsing SOAP from ${fileName}:`, error);
+        }
+      }
+
       // Add to patient's files array
       if (!patient.files) {
         patient.files = [];
@@ -1719,11 +2059,14 @@ async function attachChartNotes(chartNoteFiles, clinicId, warnings) {
       patient.files.push({
         fileName: fileName,
         filePath: newFileName,
-        fileType: path.extname(fileName).toLowerCase(),
+        fileType: fileExt,
         uploadedAt: new Date(),
         uploadedBy: 'ChiroTouch Import',
         category: 'Chart Notes',
-        description: 'Imported from ChiroTouch export'
+        description: soapParsed ?
+          'Imported from ChiroTouch export - SOAP data extracted' :
+          'Imported from ChiroTouch export',
+        soapParsed: soapParsed
       });
 
       await patient.save();
@@ -1843,6 +2186,97 @@ function extractPatientIdFromFilename(fileName) {
   }
 
   return null;
+}
+
+// Helper function to parse SOAP data from chart note content
+function parseSOAPFromChartNote(content, fileName) {
+  const soapData = {
+    subjective: '',
+    objective: '',
+    assessment: '',
+    plan: '',
+    visitDate: null,
+    provider: '',
+    painScale: null
+  };
+
+  try {
+    // Extract visit date from filename (common ChiroTouch pattern)
+    const dateMatch = fileName.match(/(\d{2}_\d{2}_\d{4})/);
+    if (dateMatch) {
+      const dateStr = dateMatch[1].replace(/_/g, '/');
+      soapData.visitDate = new Date(dateStr);
+    }
+
+    // Extract provider name from filename
+    const providerMatch = fileName.match(/([A-Z][a-z]+_[A-Z][a-z]+)/);
+    if (providerMatch) {
+      soapData.provider = providerMatch[1].replace(/_/g, ' ');
+    }
+
+    // Parse SOAP sections from content (case-insensitive)
+    const soapSections = {
+      subjective: /(?:subjective|chief complaint|cc|s:)(.*?)(?=objective|assessment|plan|$)/is,
+      objective: /(?:objective|examination|exam|o:)(.*?)(?=assessment|plan|$)/is,
+      assessment: /(?:assessment|diagnosis|impression|a:)(.*?)(?=plan|$)/is,
+      plan: /(?:plan|treatment|p:)(.*?)$/is
+    };
+
+    Object.entries(soapSections).forEach(([section, regex]) => {
+      const match = content.match(regex);
+      if (match && match[1]) {
+        soapData[section] = match[1].trim();
+      }
+    });
+
+    // Extract pain scale (0-10)
+    const painMatch = content.match(/pain.*?(\d{1,2})\/10|(\d{1,2})\/10.*?pain/i);
+    if (painMatch) {
+      const painValue = parseInt(painMatch[1] || painMatch[2]);
+      if (painValue >= 0 && painValue <= 10) {
+        soapData.painScale = painValue;
+      }
+    }
+
+  } catch (error) {
+    console.error(`Error parsing SOAP from ${fileName}:`, error);
+  }
+
+  return soapData;
+}
+
+// Helper function to create historical SOAP record from chart note
+async function createHistoricalSOAP(patient, soapData, fileName) {
+  try {
+    // Create a historical SOAP note entry
+    const historicalSOAP = {
+      visitDate: soapData.visitDate || new Date(),
+      provider: soapData.provider || 'ChiroTouch Import',
+      subjective: soapData.subjective,
+      objective: soapData.objective,
+      assessment: soapData.assessment,
+      plan: soapData.plan,
+      painScale: soapData.painScale,
+      source: 'ChiroTouch Chart Note',
+      originalFileName: fileName,
+      importedAt: new Date()
+    };
+
+    // Add to patient's historical SOAP notes
+    if (!patient.historicalSOAP) {
+      patient.historicalSOAP = [];
+    }
+
+    patient.historicalSOAP.push(historicalSOAP);
+    await patient.save();
+
+    console.log(`📝 Created historical SOAP record for ${patient.fullName} from ${fileName}`);
+    return true;
+
+  } catch (error) {
+    console.error(`Error creating historical SOAP for ${fileName}:`, error);
+    return false;
+  }
 }
 
 console.log('✅ ImportExport route loaded successfully');
