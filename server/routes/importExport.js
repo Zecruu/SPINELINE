@@ -160,21 +160,28 @@ const detectChirotouchStructure = (extractedFiles) => {
     }
   };
 
-  // Check for ChiroTouch folder patterns
+  // Check for ChiroTouch folder patterns (more flexible matching)
   const folderPatterns = {
-    tables: /^00_Tables\//i,
-    ledgerHistory: /^01_LedgerHistory\//i,
-    statements: /^01_Statements\//i,
-    scannedDocs: /^02_ScannedDocs\//i,
-    chartNotes: /^03_ChartNotes\//i
+    tables: /^(00_Tables|Tables)\//i,
+    ledgerHistory: /^(01_LedgerHistory|LedgerHistory|Ledger)\//i,
+    statements: /^(01_Statements|Statements)\//i,
+    scannedDocs: /^(02_ScannedDocs|ScannedDocs|Scanned)\//i,
+    chartNotes: /^(03_ChartNotes|ChartNotes|Chart|Notes)\//i
   };
 
   extractedFiles.forEach(file => {
     Object.entries(folderPatterns).forEach(([key, pattern]) => {
       if (pattern.test(file.fileName)) {
         structure.folders[key].push(file);
+        console.log(`📁 Detected ${key} file: ${file.fileName}`);
       }
     });
+  });
+
+  // Log detection results
+  console.log('📊 ChiroTouch structure detection results:');
+  Object.entries(structure.folders).forEach(([key, files]) => {
+    console.log(`  ${key}: ${files.length} files`);
   });
 
   // Determine if this is a valid ChiroTouch export
@@ -262,13 +269,23 @@ const processChirotouchPreview = async (structure, extractPath) => {
       }
     }
 
-    // Count chart notes (PDFs/TXT files)
-    preview.chartNotes.count = structure.folders.chartNotes.length;
-    preview.chartNotes.files = structure.folders.chartNotes.slice(0, 10).map(f => ({
+    // Count chart notes (PDFs/TXT files) - filter for actual chart note files
+    const chartNoteFiles = structure.folders.chartNotes.filter(f => {
+      const fileName = f.fileName.toLowerCase();
+      const ext = path.extname(fileName);
+      // Include PDF, TXT, DOC, DOCX files that look like chart notes
+      return ['.pdf', '.txt', '.doc', '.docx', '.rtf'].includes(ext) &&
+             (fileName.includes('chart') || fileName.includes('note') || fileName.includes('soap') ||
+              fileName.includes('visit') || fileName.includes('progress') || ext === '.pdf' || ext === '.txt');
+    });
+
+    preview.chartNotes.count = chartNoteFiles.length;
+    preview.chartNotes.files = chartNoteFiles.slice(0, 10).map(f => ({
       fileName: path.basename(f.fileName),
-      size: f.size
+      size: f.size,
+      type: path.extname(f.fileName).toLowerCase()
     }));
-    preview.summary.totalChartNotes = structure.folders.chartNotes.length;
+    preview.summary.totalChartNotes = chartNoteFiles.length;
 
     // Count scanned docs (PDFs)
     preview.scannedDocs.count = structure.folders.scannedDocs.length;

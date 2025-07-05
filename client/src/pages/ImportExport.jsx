@@ -787,34 +787,32 @@ const ImportExport = () => {
                       <h4 className="text-sm font-medium text-white">Import Progress</h4>
                       <span className="text-xs text-gray-400">Step {importStep} of 5</span>
                     </div>
-                    <div className="flex items-center space-x-4">
-                      {[1, 2, 3, 4, 5].map((step) => (
-                        <div key={step} className="flex items-center">
-                          <div
-                            className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium ${
-                              step <= importStep
-                                ? 'bg-blue-600 text-white'
-                                : 'bg-gray-600 text-gray-400'
-                            }`}
-                          >
-                            {step === 5 && importStep === 5 ? '✓' : step}
-                          </div>
-                          {step < 5 && (
+                    <div className="flex items-center justify-between">
+                      {[1, 2, 3, 4, 5].map((step, index) => (
+                        <div key={step} className="flex flex-col items-center flex-1">
+                          <div className="flex items-center w-full">
                             <div
-                              className={`w-8 h-0.5 ${
-                                step < importStep ? 'bg-blue-600' : 'bg-gray-600'
+                              className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium ${
+                                step <= importStep
+                                  ? 'bg-blue-600 text-white'
+                                  : 'bg-gray-600 text-gray-400'
                               }`}
-                            />
-                          )}
+                            >
+                              {step === 5 && importStep === 5 ? '✓' : step}
+                            </div>
+                            {step < 5 && (
+                              <div
+                                className={`flex-1 h-0.5 mx-2 ${
+                                  step < importStep ? 'bg-blue-600' : 'bg-gray-600'
+                                }`}
+                              />
+                            )}
+                          </div>
+                          <span className="text-xs text-gray-400 mt-2">
+                            {['Upload', 'Map', 'Preview', 'Import', 'Results'][index]}
+                          </span>
                         </div>
                       ))}
-                    </div>
-                    <div className="flex justify-between text-xs text-gray-400 mt-2">
-                      <span>Upload</span>
-                      <span>Map</span>
-                      <span>Preview</span>
-                      <span>Import</span>
-                      <span>Results</span>
                     </div>
                   </div>
                 )}
