@@ -910,7 +910,87 @@ router.use((error, req, res, next) => {
   }
 });
 
-// Process import data
+// Process ChiroTouch import data (server-side only)
+router.post('/process-chirotouch', verifyToken, async (req, res) => {
+  try {
+    const { type, data, columnMapping, isChirotouch, structure, extractPath, selectedDatasets } = req.body;
+    const { clinicId, userId, name: userName } = req.user;
+
+    console.log(`🔄 Processing ChiroTouch import: type=${type}, clinic=${clinicId}`);
+
+    // Only handle ChiroTouch imports on this endpoint
+    if (!isChirotouch || type !== 'chirotouch-full') {
+      return res.status(400).json({
+        success: false,
+        message: 'This endpoint only handles ChiroTouch full imports'
+      });
+    }
+
+    const importHistory = new ImportHistory({
+      clinicId,
+      importType: 'chirotouch-full',
+      importSource: 'ChiroTouch Export',
+      originalFileName: req.body.originalFileName || 'chirotouch-export.zip',
+      fileSize: req.body.fileSize || 0,
+      fileType: 'zip',
+      importedBy: userName,
+      importedByUserId: userId,
+      status: 'processing',
+      processingStarted: new Date()
+    });
+
+    try {
+      const result = await processChirotouchFullImport(structure, extractPath, clinicId, userName, selectedDatasets);
+
+      // Update import history
+      importHistory.summary = result.summary;
+      importHistory.chirotouchData = result.chirotouchData;
+      importHistory.errors = result.errors;
+      importHistory.duplicates = result.duplicates;
+      importHistory.warnings = result.warnings;
+      importHistory.status = 'completed';
+      importHistory.processingCompleted = new Date();
+      importHistory.processingDuration = Date.now() - importHistory.processingStarted.getTime();
+
+      await importHistory.save();
+
+      // Clean up extracted files
+      if (fs.existsSync(extractPath)) {
+        fs.rmSync(extractPath, { recursive: true, force: true });
+      }
+
+      return res.json({
+        success: true,
+        summary: result.summary,
+        chirotouchData: result.chirotouchData,
+        errors: result.errors.slice(0, 10),
+        duplicates: result.duplicates.slice(0, 10),
+        warnings: result.warnings.slice(0, 10),
+        importHistoryId: importHistory._id
+      });
+
+    } catch (error) {
+      importHistory.status = 'failed';
+      importHistory.processingCompleted = new Date();
+      importHistory.errors.push({
+        errorMessage: error.message,
+        timestamp: new Date()
+      });
+      await importHistory.save();
+      throw error;
+    }
+
+  } catch (error) {
+    console.error('❌ ChiroTouch import processing error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'ChiroTouch import failed: ' + error.message,
+      error: error.message
+    });
+  }
+});
+
+// Process import data (regular CSV/Excel imports)
 router.post('/process', verifyToken, async (req, res) => {
   try {
     const { type, data, columnMapping, isChirotouch, structure, extractPath, selectedDatasets } = req.body;

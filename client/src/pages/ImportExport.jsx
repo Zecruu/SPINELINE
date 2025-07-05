@@ -328,8 +328,8 @@ const ImportExport = () => {
 
       // Use different endpoints for ChiroTouch vs regular imports
       const endpoint = isChirotouch
-        ? '/server/import-export/process'  // Server-side for ChiroTouch
-        : '/api/import-export/process';    // API for regular imports
+        ? '/api/import-export/process-chirotouch'  // Server-side for ChiroTouch
+        : '/api/import-export/process';            // API for regular imports
 
       const response = await fetch(endpoint, {
         method: 'POST',
