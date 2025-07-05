@@ -813,28 +813,30 @@ router.post('/upload', upload.single('importFile'), async (req, res) => {
       fs.mkdirSync(extractPath, { recursive: true });
 
       try {
-        // For now, just return success with basic info
-        // The actual extraction will be handled in the process endpoint
+        console.log('🗜️ Extracting ZIP file for analysis...');
+
+        // Extract the ZIP file to analyze its contents
+        const extractedFiles = await extractZipFile(filePath, extractPath);
+        console.log(`📁 Extracted ${extractedFiles.length} files`);
+
+        // Detect ChiroTouch structure
+        const structure = detectChirotouchStructure(extractedFiles);
+        console.log('📊 Structure detection complete');
+
+        // Generate preview data
+        const preview = await processChirotouchPreview(structure, extractPath);
+        console.log('📋 Preview generation complete');
+
         return res.json({
           success: true,
-          isChirotouch: true,
-          message: 'ZIP file uploaded successfully',
+          isChirotouch: structure.isChirotouch,
+          message: `ChiroTouch export analyzed successfully. Found ${preview.summary.totalPatients} patients, ${preview.summary.totalAppointments} appointments, ${preview.summary.totalChartNotes} chart notes.`,
           uploadId: req.file.filename,
           originalFileName: req.file.originalname,
           fileSize: req.file.size,
           extractPath: extractPath,
-          preview: {
-            summary: {
-              totalPatients: 0,
-              totalAppointments: 0,
-              totalLedgerRecords: 0
-            },
-            patients: { count: 0 },
-            appointments: { count: 0 },
-            ledger: { count: 0 },
-            chartNotes: { count: 0 },
-            scannedDocs: { count: 0 }
-          }
+          structure: structure,
+          preview: preview
         });
       } catch (error) {
         console.error('ZIP processing error:', error);
