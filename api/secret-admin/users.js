@@ -44,7 +44,7 @@ const connectDB = async () => {
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true },
-  password: { type: String, required: true },
+  passwordHash: { type: String, required: true },
   role: { type: String, enum: ['doctor', 'secretary', 'admin'], default: 'doctor' },
   clinicId: { type: String, required: true },
   isActive: { type: Boolean, default: true },
@@ -88,7 +88,7 @@ export default async function handler(req, res) {
 
     if (req.method === 'GET') {
       // Get all users (excluding passwords)
-      const users = await User.find({}, { password: 0 })
+      const users = await User.find({}, { passwordHash: 0 })
         .sort({ createdAt: -1 })
         .lean();
 
@@ -137,7 +137,7 @@ export default async function handler(req, res) {
       const newUser = new User({
         name,
         email: email.toLowerCase(),
-        password: hashedPassword,
+        passwordHash: hashedPassword,
         role,
         clinicId: clinicId.toUpperCase(),
         isActive: true
@@ -147,7 +147,7 @@ export default async function handler(req, res) {
 
       // Return user without password and include clinic info
       const userResponse = newUser.toObject();
-      delete userResponse.password;
+      delete userResponse.passwordHash;
 
       return res.json({
         success: true,
