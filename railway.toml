@@ -13,3 +13,6 @@ restartPolicyMaxRetries = 3
 NODE_ENV = "production"
 MONGO_URI = "mongodb+srv://nomnk5138:Redzone12@spinev0.zbqy7hv.mongodb.net/spineline?retryWrites=true&w=majority"
 JWT_SECRET = "spineline-jwt-secret-2024"
+ADMIN_EMAIL = "admin@spineline.com"
+ADMIN_PASSWORD = "SpineLine2024!"
+ADMIN_USERNAME = "spineline_admin"
