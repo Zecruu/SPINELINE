@@ -1,23 +1,18 @@
-# Ultra-simple build for Railway
+# Minimal build for Railway - Skip client build for now
 FROM node:18-alpine
 
 WORKDIR /app
 
-# Install dependencies in separate steps to use Docker cache better
-COPY package*.json ./
-RUN npm install --production
-
+# Only install server dependencies
 COPY server/package*.json ./server/
 RUN cd server && npm install --production
 
-COPY client/package*.json ./client/
-RUN cd client && npm install
+# Copy server code only
+COPY server/ ./server/
 
-# Copy source code
-COPY . .
-
-# Build client with memory limit
-RUN cd client && NODE_OPTIONS="--max-old-space-size=1024" npm run build
+# Create a minimal client dist directory with basic HTML
+RUN mkdir -p client/dist
+RUN echo '<!DOCTYPE html><html><head><title>SpineLine</title></head><body><h1>SpineLine Server Running</h1><p>API available at /api/health</p></body></html>' > client/dist/index.html
 
 # Create uploads directory
 RUN mkdir -p server/uploads/patient-photos server/uploads/patient-documents
