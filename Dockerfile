@@ -1,23 +1,23 @@
-# Simple single-stage build for Railway
+# Ultra-simple build for Railway
 FROM node:18-alpine
 
 WORKDIR /app
 
-# Copy package files
+# Install dependencies in separate steps to use Docker cache better
 COPY package*.json ./
-COPY server/package*.json ./server/
-COPY client/package*.json ./client/
+RUN npm install --production
 
-# Install all dependencies
-RUN npm install && \
-    cd server && npm install && \
-    cd ../client && npm install
+COPY server/package*.json ./server/
+RUN cd server && npm install --production
+
+COPY client/package*.json ./client/
+RUN cd client && npm install
 
 # Copy source code
 COPY . .
 
-# Build client
-RUN cd client && npm run build
+# Build client with memory limit
+RUN cd client && NODE_OPTIONS="--max-old-space-size=1024" npm run build
 
 # Create uploads directory
 RUN mkdir -p server/uploads/patient-photos server/uploads/patient-documents
