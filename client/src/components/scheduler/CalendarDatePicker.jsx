@@ -79,7 +79,7 @@ const CalendarDatePicker = ({ selectedDates, onDateSelection }) => {
       days.push(
         <button
           key={`prev-${date.getDate()}`}
-          className="h-12 w-12 text-gray-500 hover:bg-gray-700 rounded-lg transition-colors"
+          className="w-full aspect-square bg-gray-700 text-gray-500 border border-gray-700 cursor-not-allowed"
           disabled
         >
           {date.getDate()}
@@ -102,16 +102,16 @@ const CalendarDatePicker = ({ selectedDates, onDateSelection }) => {
           onMouseEnter={() => setHoveredDate(date)}
           onMouseLeave={() => setHoveredDate(null)}
           disabled={isPast}
-          className={`h-12 w-12 rounded-lg font-medium transition-all duration-200 ${
+          className={`w-full aspect-square font-medium transition-all duration-200 border border-gray-700 focus:z-10 focus:outline-none ${
             isPast
-              ? 'text-gray-600 cursor-not-allowed'
+              ? 'bg-gray-800 text-gray-600 cursor-not-allowed'
               : isSelected
-              ? 'bg-blue-600 text-white shadow-lg ring-2 ring-blue-400'
+              ? 'bg-blue-600 text-white ring-2 ring-blue-400'
               : isToday
               ? 'bg-green-600 text-white hover:bg-green-700'
               : isHovered
               ? 'bg-gray-600 text-white'
-              : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+              : 'bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white'
           }`}
         >
           {day}
@@ -127,7 +127,7 @@ const CalendarDatePicker = ({ selectedDates, onDateSelection }) => {
       days.push(
         <button
           key={`next-${day}`}
-          className="h-12 w-12 text-gray-500 hover:bg-gray-700 rounded-lg transition-colors"
+          className="w-full aspect-square bg-gray-700 text-gray-500 border border-gray-700 cursor-not-allowed"
           disabled
         >
           {day}
@@ -183,7 +183,7 @@ const CalendarDatePicker = ({ selectedDates, onDateSelection }) => {
         </div>
 
         {/* Day Headers */}
-        <div className="grid grid-cols-7 gap-2 mb-4">
+        <div className="grid grid-cols-7 gap-px bg-gray-600 rounded-t-lg overflow-hidden mb-1">
           {dayNames.map(day => (
             <div key={day} className="h-8 flex items-center justify-center text-sm font-medium text-gray-400">
               {day}
@@ -192,7 +192,7 @@ const CalendarDatePicker = ({ selectedDates, onDateSelection }) => {
         </div>
 
         {/* Calendar Grid */}
-        <div className="grid grid-cols-7 gap-2">
+        <div className="grid grid-cols-7 gap-px bg-gray-600 rounded-b-lg overflow-hidden">
           {renderCalendarDays()}
         </div>
       </div>
